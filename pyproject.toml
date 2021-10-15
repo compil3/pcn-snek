@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "pcn"
+version = "0.0.1"
+description = "PCN Bot using dis-snek"
+authors = ["compil3 <luca.tenuta@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.9.5"
+dis-snek = "^0.1.0"
+black = "^21.9b0"
+python-dotenv = "^0.19.1"
+dnspython = "^2.1.0"
+motor = "^2.5.1"
+requests = "^2.26.0"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
