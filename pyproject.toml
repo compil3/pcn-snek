@@ -7,7 +7,6 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.9.5"
-dis-snek = "^0.1.0"
 black = "^21.9b0"
 python-dotenv = "^0.19.1"
 dnspython = "^2.1.0"

@@ -14,6 +14,7 @@ from os import environ, listdir
 from sys import platform
 
 import time
+import sys
 
 
 start = time.perf_counter()
@@ -23,7 +24,7 @@ class Bot(Snake):
     def __init__(self):
         super().__init__(
             intents=Intents.ALL,
-            default_prefix=True,
+            default_prefix="?",
             sync_interactions=True,
             delete_unused_application_cmds=True,
             asyncio_debug=True,
@@ -69,5 +70,16 @@ logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s,%(msecs)d: %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s",
 )
+
+for filename in listdir("./scales"):
+    if filename.endswith(".py") and not filename.startswith("_"):
+        try:
+            bot.grow_scale(f"scales.{filename[:-3]}")
+            print(f"Loaded scales.{filename[:-3]}")
+            logging.info(f"scales.{filename[:-3]} loaded.")
+        except Exception as e:
+            print(f"Failed to load scale {filename[:-3]}.", file=sys.stderr)
+
+
 load_dotenv(".env")
 bot.start(environ.get('TOKEN'))
