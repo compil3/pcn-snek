@@ -35,8 +35,8 @@ class Admin(Scale):
                         print(f"Failed to load scale {filename[:-3]}: {e}")
                         embed.add_field(name=f"Failed to load ``{filename}``", value=e, inline=False)
             elif kwargs == filename:
-                if ".py" not in scale:
-                    module = scale + ".py"
+                if ".py" not in kwargs:
+                    module = kwargs + ".py"
                 if module == filename:
                     self.bot.regrow_scale(f"scales.{filename[:-3]}")
                     print(f"Reloaded {filename}")
@@ -74,29 +74,42 @@ class Admin(Scale):
     async def load_error(self, e: ExtensionNotFound, *args, **kwargs):
         logging.error(f"load.error caught failure: {e}\n{args=}\n{kwargs=}")
 
-
-    @slash_command("command", description="This is a test", scope=guild_id)
-    @slash_option("another", "str option", 3, required=False)
-    @slash_option("option", "int option", 4, required=False)
-    async def command(self, ctx: InteractionContext, **kwargs):
-        await ctx.send(str(ctx.resolved))
-        await ctx.send(f"Test: {kwargs}", components=[ActionRow(Button(1, "Test"))])
-        print(ctx.resolved)
-
     #TODO: add a reload single scale command
 
     @slash_command("scales", description="List all Scales", scope=guild_id)
     async def scale_builder(self, ctx: InteractionContext, **kwargs):
         await ctx.defer(ephemeral=True)
+        
         try:
-            selection = Select(placeholder="Select a Scale to reload", min_values=1, max_values=1, custom_id="ScalesList"
-            for scale_file in listdir("./scales"):
-                if scale_file.endswith(".py") and not scale_file.startswith("_"):
-                    selection.add_option(SelectOption(label=f"{scale_file}", value=scale_file[:-3], default=False))
+            selection = Select(placeholder="Select a Scale to reload", min_values=1, max_values=1, custom_id="ScalesList")
+            for file in BuildScales():
+                selection.add_option(SelectOption(label=f"{file}", value=file, default=False))
             await ctx.send(f"Testing list", components=selection)
         except Exception as e:
             print(e)
 
-    @component_callback(custom_id="ScalesList"):
+    @component_callback(custom_id="ScalesList")
+    async def scalelist_callback(self, ctx, **kwargs):
+        scales = BuildScales()
+        if ctx.data['data']['values'][0] in scales:
+            self.bot.regrow_scale(f"scales.{ctx.data['data']['values'][0]}.py")
+        else:
+            print("Nothing Worked.")
+
+#TODO: Pass relative path in list
+def BuildScales():
+    scale_list = []
+    try:
+        for scale_file in listdir("./scales"):
+            if scale_file.endswith(".py") and not scale_file.startswith("_"):
+                scale_list.append(scale_file[:-3])
+            else:
+                pass
+    except Exception as e:
+        print(e)
+    
+    return scale_list
+
+
 def setup(bot):
     Admin(bot)
