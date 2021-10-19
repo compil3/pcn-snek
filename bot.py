@@ -45,7 +45,7 @@ class Bot(Snake):
                 f"Logged in as {await bot.name} ID:{await bot.id} after {round(time.perf_counter() - start, 2)} seconds"
             )
         elif platform == "win32":
-            # os.system('cls')
+            os.system('cls')
             print("--Pro Clubs Nation Bot v1.0---")
             print(
                 f"Logged in as {bot.user} ID:{bot.user.id} after {round(time.perf_counter() - start, 1)} seconds"
