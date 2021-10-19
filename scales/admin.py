@@ -9,10 +9,18 @@ from dis_snek.models.context import InteractionContext
 
 import logging
 import sys
+import pathlib
 
 guild_id = 689119429375819951
 admin_perm = [Permission(842505724458172467, 1, True)]
 class Admin(Scale):
+
+    scales_list = []
+    path = pathlib.Path.cwd()
+    print(path)
+    for file in path.glob('scales/*.py'):
+        scales_list.append(file.stem)   
+
     # FIXME: fix reload command
     @slash_command("reload", description="Reload all Scales", scope=guild_id)
     @slash_permission(guild_id=guild_id, permissions=admin_perm)
@@ -78,37 +86,37 @@ class Admin(Scale):
 
     @slash_command("scales", description="List all Scales", scope=guild_id)
     async def scale_builder(self, ctx: InteractionContext, **kwargs):
-        await ctx.defer(ephemeral=True)
-        
+        await ctx.defer(ephemeral=True)  
         try:
             selection = Select(placeholder="Select a Scale to reload", min_values=1, max_values=1, custom_id="ScalesList")
-            for file in BuildScales():
-                selection.add_option(SelectOption(label=f"{file}", value=file, default=False))
+            for file in Admin.scales_list:
+                selection.add_option(SelectOption(label=file, value=file, default=False))
             await ctx.send(f"Testing list", components=selection)
         except Exception as e:
             print(e)
 
     @component_callback(custom_id="ScalesList")
-    async def scalelist_callback(self, ctx, **kwargs):
-        scales = BuildScales()
-        if ctx.data['data']['values'][0] in scales:
-            self.bot.regrow_scale(f"scales.{ctx.data['data']['values'][0]}.py")
+    async def scalelist_callback(self, ctx: InteractionContext, **kwargs):
+        await ctx.defer(ephemeral=True)
+        selected_scale = ctx.data['data']['values'][0]
+        embed = Embed(title=f"Attempting to reload {selected_scale}", color=0x808080)
+        if selected_scale in Admin.scales_list:
+            self.bot.regrow_scale(f"scales.{ctx.data['data']['values'][0]}")
+            embed.add_field(name=f"Reloaded Scale", value=selected_scale, inline=False)
+            await ctx.edit_origin(embeds=[embed])
         else:
             print("Nothing Worked.")
 
+
 #TODO: Pass relative path in list
-def BuildScales():
-    scale_list = []
-    try:
-        for scale_file in listdir("./scales"):
-            if scale_file.endswith(".py") and not scale_file.startswith("_"):
-                scale_list.append(scale_file[:-3])
-            else:
-                pass
-    except Exception as e:
-        print(e)
-    
-    return scale_list
+# def BuildScales():
+#     scales_list = []
+#     path = pathlib.Path.cwd()
+#     print(path)
+#     for file in path.glob('scales/*.py'):
+#         print(file.__str__())
+#         scales_list.append(file.__str__())   
+#     return scales_list
 
 
 def setup(bot):
