@@ -37,10 +37,6 @@ class Register(Scale):
     async def register(self, ctx, gamertag: str):
         _status = None
 
-        print(dir(ctx))
-        print(f"\n\n{dir(ctx.message)}")
-        print(f"\n\n{dir(ctx.send)}")
-
         if bool(re.search(r"\s", gamertag)):
             gamertag = gamertag.replace(" ","-")
 
@@ -48,12 +44,8 @@ class Register(Scale):
 
         if exists is not None:
             _status = f"You have already registered a Gamertag.  If you are attempting to change your registered tag, please use ``/reset [new_gamer_tag]``"
-            # embed.set_author(name=f"{exists['registered_gamer_tag']} Link", url=default_player_url.format(gamertag), icon_url="https://proclubsnation.com/wp-content/uploads/2020/08/PCN_logo_Best.png")
-            # embed.add_field(name="Gamertag", value=exists['registered_gamer_tag'], inline=False)
-            # embed.add_field(name="Registered On", value=exists['date_registered'], inline=False)
-            # await ctx.send(f"{ctx.author.user.mention} Check your DMs.", ephemeral=True)
-
-            # await ctx.author.user.send(embeds=[embed], ephemeral=True)
+            registered_Tag = exists['registered_gamer_tag']
+            date_registered = exists['date_registered']
         else:
             current_time = datetime.now()
             reg_date = current_time.strftime(format)
@@ -67,16 +59,17 @@ class Register(Scale):
             await collection.insert_one(post)
             _status = f"Gamertag successfully registered."
         embed = Embed(title="PCN Discord Registration System", description=_status)
+        embed.add_field(name="Gamertag", value=exists['registered_gamer_tag'], inline=False)
+        embed.add_field(name="Registration Date", value=exists['date_registered'], inline=False)
         embed.set_author(name=f"{exists['registered_gamer_tag']} Link", url=default_player_url.format(gamertag), icon_url="https://proclubsnation.com/wp-content/uploads/2020/08/PCN_logo_Best.png")
-        embed.add_field(name="Gamertag", value={exists['registerd_gamer_tag']}, inline=False)
-        embed.add_field(name="Registration Date", value=reg_date, inline=False)
-        await ctx.send(f"{ctx.author.user.mention} Check your DMs.", ephemeral=True)
-        await ctx.author.send(embeds=[embed], ephemeral=True)
+
+        # await ctx.send(f"{ctx.author.user.mention} Check your DMs.", ephemeral=True)
+        await ctx.send(embeds=[embed], ephemeral=True)
 
 
     @register.error
     async def command_error(self, e, *args, **kwargs):
-        print(f"{e}\n\n")
+        print(f"{args=}")
      
 
 def setup(bot):

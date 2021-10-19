@@ -36,7 +36,7 @@ class Bot(Snake):
     async def on_ready(self):
         print("Ready")
         if platform == "linux" or platform == "linxu2":
-            os.system("clear")
+            # os.system("clear")
             print("--Pro Clubs Nation Bot v1.0---")
             print(
                 f"Logged in as {await bot.name} ID:{await bot.id} after {round(time.perf_counter() - start, 2)} seconds"
@@ -45,7 +45,7 @@ class Bot(Snake):
                 f"Logged in as {await bot.name} ID:{await bot.id} after {round(time.perf_counter() - start, 2)} seconds"
             )
         elif platform == "win32":
-            os.system('cls')
+            # os.system('cls')
             print("--Pro Clubs Nation Bot v1.0---")
             print(
                 f"Logged in as {bot.user} ID:{bot.user.id} after {round(time.perf_counter() - start, 1)} seconds"
@@ -81,5 +81,5 @@ for filename in listdir("./scales"):
             print(f"Failed to load scale {filename[:-3]}.", file=sys.stderr)
 
 
-load_dotenv(".env")
+load_dotenv()
 bot.start(environ.get('TOKEN'))
