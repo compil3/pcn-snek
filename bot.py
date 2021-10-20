@@ -15,11 +15,14 @@ from sys import platform
 
 import time
 import sys
+# import json
+from pyxtension import Json
+from extensions import default
 
-
+# https://github.com/MenuDocs/Discord.PY-Tutorials/blob/Episode-6/bot.py
 start = time.perf_counter()
 
-
+config = default.config()
 class Bot(Snake):
     def __init__(self):
         super().__init__(
@@ -82,4 +85,19 @@ for filename in listdir("./scales"):
 
 
 load_dotenv()
-bot.start(environ.get('TOKEN'))
+admin_cmds = []
+body = Json(config)
+print(body.query.filtered.query.guilds.Nine2.mod)
+
+print(body.query)
+json_str = json.dumps(config)
+resp = json.loads(json_str)
+for name in resp['guilds']:
+    print(resp['guilds'][name]['mod'])
+# print(resp)
+# print(resp['guilds']['Nine2']['mod'])
+# # for name in config['guilds']:
+#     for key, value in config['guilds'][name]:
+#         print(key, value)
+        
+bot.start(config['token'])

@@ -13,6 +13,7 @@ dnspython = "^2.1.0"
 motor = "^2.5.1"
 requests = "^2.26.0"
 dis-snek = {git = "https://github.com/Discord-Snake-Pit/Dis-Snek.git"}
+pyxtension = "^1.13.16"
 
 [tool.poetry.dev-dependencies]
 
