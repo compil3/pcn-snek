@@ -144,3 +144,9 @@ bot-env/Scripts/activate.bat
 bot-env/Scripts/Activate.ps1
 bot-env/Scripts/deactivate.bat
 bot-env/Scripts/mypyc
+configs/pcn_cfg.json
+configs/pcnstaff_cfg.json
+configs/test_cfg.json
+bot_config.json
+
+bot-env/src/
