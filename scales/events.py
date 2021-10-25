@@ -48,13 +48,10 @@ class Events(Scale):
                     f"\n{message.author.display_name} deleted a message.\nContent: {message.content}"
                 )
 
-    # TODO: Add message on member join
+
     @listen()
     async def on_member_remove(self, event):
-        print(event)
-        pass
-        # print(f"\n\n{event.guild.name}")
-        # print(f"\n\n{event.guild.id}")
+        ...
 
     @listen()
     async def on_member_update(self, event):
