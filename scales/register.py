@@ -44,7 +44,7 @@ guild_id = 689119429375819951
 # New role - 843896103686766632
 # Player role - 843899510483976233
 admin_perm = [Permission(843896103686766632, 1, True)]
-register = Permission(843896103686766632,1,True),Permission(842505724458172467,1,True)
+register = [Permission(843896103686766632,1,True),Permission(842505724458172467,1,True)]
 
 format = "%b %d %Y %I:%M%p"
 
@@ -54,7 +54,7 @@ class Register(Scale):
     @slash_command(
         "register",
         description="Register Discord to your Gamertag.**HINT** Look at your player profile page url.('-' FOR SPACES)",
-        scope=guild_id,
+        scopes=[guild_id,],
         default_permission=False
     )
     @slash_permission(guild_id=guild_id, permissions=register)

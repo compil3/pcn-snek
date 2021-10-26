@@ -1,28 +1,33 @@
 import logging
-from logging.handlers import RotatingFileHandler
-
-import dis_snek.const
-from dis_snek.models.enums import Intents
-from dis_snek.models.listener import listen
-from dis_snek.client import Snake
-
-from dotenv import load_dotenv
-
 import os
-from os import environ, listdir
-
+import sys
+import time
+import zoneinfo
+from datetime import timezone
+from logging.handlers import RotatingFileHandler
+from os import environ, listdir, name
 from sys import platform
 
-import time
-import sys
-# import json
+import dis_snek.const
+from apscheduler.schedulers.background import BackgroundScheduler
+from dis_snek.client import Snake
+from dis_snek.models import Activity, ActivityType
+from dis_snek.models.enums import Intents, Status
+from dis_snek.models.listener import listen
+from dotenv import load_dotenv
+from pytz import utc
 from pyxtension import Json
-from extensions import default
 
+from extensions import default, globals, stats
 
 start = time.perf_counter()
 
 config = default.config()
+time_seconds = 0
+time_minutes = 0
+time_hours = 0
+time_days = 0
+Toronto = zoneinfo.ZoneInfo('America/Toronto')
 class Bot(Snake):
     def __init__(self):
         super().__init__(
@@ -37,6 +42,13 @@ class Bot(Snake):
 
     @listen()
     async def on_ready(self):
+        await self.change_presence(
+            activity=Activity(
+                type=ActivityType.PLAYING,
+                name="Powered by sneks.",
+            )
+        )
+        print(f"{self.user} is ready!")
         print("Ready")
         if platform == "linux" or platform == "linxu2":
             # os.system("clear")
@@ -56,6 +68,13 @@ class Bot(Snake):
             logging.info(
                 f"Logged in as {bot.user} ID: {bot.user.id} after {round(time.perf_counter() - start, 1)} seconds"
             )
+        globals.init()
+        globals.lag = bot.latency
+
+        schedule = BackgroundScheduler()
+        schedule.add_job(stats.stats, "interval", seconds=5, id="stats", timezone=utc)
+        schedule.start()
+
 
 
 bot = Bot()
@@ -82,7 +101,6 @@ for filename in listdir("./scales"):
             logging.info(f"scales.{filename[:-3]} loaded.")
         except Exception as e:
             print(f"Failed to load scale {filename[:-3]}.", file=sys.stderr)
-
 
 load_dotenv()       
 bot.start(config['token'])

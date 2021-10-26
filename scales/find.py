@@ -26,18 +26,20 @@ load_dotenv()
 config = default.config()
 default_player_url = config['urls']['players']
 
-guild_ids=689119429375819951
+guild_id = 689119429375819951
 admin_perm = [Permission(842505724458172467, 1, True)]
+
+#TODO: Add guild ids to a json config file instead of hardcoring them
+
 class PlayerFinder(Scale):
 
     @slash_command(
         "find",
-        description="Staff only",
-        scope=int(config['guilds']['Nine2']['id']),
+        "Staff only",
+        scopes=[guild_id,],
         default_permission=False
     )
-    @slash_permission(
-        guild_id=int(config['guilds']['Nine2']['id']), permissions=admin_perm)
+    @slash_permission(guild_id=guild_id, permissions=admin_perm)
     @slash_option("gamertag", "Enter Gamertag to check", 3, required=True)
     async def find(self, ctx, gamertag: str):
         await ctx.defer(ephemeral=True)
