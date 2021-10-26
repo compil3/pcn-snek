@@ -26,7 +26,7 @@ new_user = Permission(843896103686766632,1,True),
 
 class Verification(Scale):
 
-    @slash_command("add", description="Add yourself to the verification queue.", scope=guildid, default_permission=False)
+    @slash_command("add", description="Add yourself to the verification queue.", scopes=[guildid,], default_permission=False)
     @slash_permission(guild_id=guildid, permissions=new_user)
     @slash_option("gamertag", "Your Xbox Gamer tag on the site.", 3, required=True)
     async def add_queue(self, ctx, gamertag:str):
@@ -69,6 +69,35 @@ class Verification(Scale):
         await ctx.send("A copy has been DM'd to you as well.", embeds=[embed])
         await ctx.author.send(embeds=[embed])
 
+
+    @slash_command("check", description="Check the status of your Discord application", scopes=[guildid,], default_permission=False)
+    @slash_permission(guild_id=guildid, permissions=new_user)
+    async def check(self, ctx):
+        await ctx.defer(ephemeral=True)
+        _status = None
+        try:
+            applicant = await collection.find_one({"_id": ctx.author.id})
+
+            if applicant["status"] == "Denied":
+                _status = f"**Status** :no_entry: **{applicant['status']}"
+                _reason = applicant["reason"]
+                _updated = applicant['updated']
+            else:
+                _status = f"**Status**: :warning: **{applicant['status']}**"
+                _reason = f"**{applicant['reason']}**"
+                _updated = applicant["updated"]
+
+            embed = Embed(
+                title="PCN Discord Verification Status", description=_status
+            )
+            embed.add_field(name="**Reason**", value=_reason, inline=False)
+            embed.add_field(name="Last Updated", value=_updated, inline=False) 
+        except Exception as e:
+            logging.error(e)
+        await ctx.send(embeds=[embed])
+
+
+    
 
 def setup(bot):
     Verification(bot)
