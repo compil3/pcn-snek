@@ -1,4 +1,6 @@
 import logging
+import datetime
+from dis_snek.models import listener, Timestamp
 
 import motor.motor_asyncio as motor
 from dis_snek.models import listen
@@ -6,6 +8,7 @@ from dis_snek.models.discord_objects.embed import Embed
 from dis_snek.models.discord_objects.user import Member
 from dis_snek.models.listener import listen
 from dis_snek.models.scale import Scale
+from dis_snek.models.events import MessageCreate, MessageDelete, MessageUpdate, MemberAdd, MemberRemove, MemberUpdate
 from extensions import default
 from extensions import auto_verify
 
@@ -19,7 +22,7 @@ verify = auto_verify.verify
 
 class Events(Scale):
     @listen()
-    async def on_message_create(self, event):
+    async def on_message_create(self, event: MessageCreate):
 
         message = event.message
 
@@ -35,9 +38,8 @@ class Events(Scale):
                 await message.delete()
 
     @listen()
-    async def on_message_delete(self, event):
+    async def on_message_delete(self, event: MessageDelete):
         message = event.message
-        print(f"\n\n{message.content}")
         if message.type.name == "PRIVATE":
             return
         elif message.type.name == "DEFAULT":
@@ -50,17 +52,18 @@ class Events(Scale):
 
 
     @listen()
-    async def on_member_remove(self, event):
+    async def on_member_remove(self, event: MemberRemove):
         ...
 
     @listen()
-    async def on_member_update(self, event):
+    async def on_member_update(self, event: MemberUpdate):
         role_id = 843896103686766632
-
-        if event.before.pending and event.after.pending is True:
+        before = event.before
+        after = event.after
+        if event.before.pending and event.after.pending:
             pass
-        elif event.after.pending is False and event.before.pending is True:
-            if verify(event.after.display_name) is False:
+        elif before.pending and not after.pending:
+            if not verify(event.after.display_name):
                 embed = Embed(
                     title="Welcome to Pro Clubs Nation Discord",
                     description="Unfortunately your Discord username does not match any records.  Therefore you will have to add yourself to our verification queue by typing **/add [GamerTag]** inside of **#new-member-verification** and waiting until you are verified.  Thank you for your patience.",
@@ -69,11 +72,10 @@ class Events(Scale):
                 embed = Embed(
                     title="Welcome to Pro Clubs Nation Discord",
                     description="You have been automatically verified as your Discord name matches our records.  If this is incorrect please let a Moderator know.  Failure to do so will result in termination of access to our Discord.  Thank you and play nice.",
-                )              
-                await event.after.add_role(role_id)
-            await event.after.send(embeds=[embed])
-        else:
-            pass
+                )
+                await after.add_role(role_id)
+            await after.send(embeds=[embed])
+            
 
     @listen()
     async def on_member_add(self, event):
