@@ -1,8 +1,10 @@
 import datetime
 import logging
+from dis_snek.client import Snake
+from dis_snek.models import ( Scale, Embed, InteractionContext, timestamp )
+from dis_snek.models.application_commands import slash_command, slash_option, slash_permission, Permission, ContextMenu, context_menu
 
-from dis_snek.models import ( Scale, Embed, timestamp )
-from dis_snek.models.application_commands import slash_command, slash_option, slash_permission, Permission
+from dis_snek.models.enums import CommandTypes
 
 import motor.motor_asyncio as motor
 
@@ -22,9 +24,13 @@ collection = db['verification']
 # Guild stuff
 guildid = 689119429375819951
 new_user = Permission(843896103686766632,1,True),
+mod_perm =Permission(842505724458172467, 1, True)
 
 
 class Verification(Scale):
+
+    def get_member(self, bot):
+        self.bot: Snake = bot
 
     @slash_command("add", description="Add yourself to the verification queue.", scopes=[guildid,], default_permission=False)
     @slash_permission(guild_id=guildid, permissions=new_user)
@@ -95,9 +101,7 @@ class Verification(Scale):
         except Exception as e:
             logging.error(e)
         await ctx.send(embeds=[embed])
-
-
-    
+   
 
 def setup(bot):
     Verification(bot)

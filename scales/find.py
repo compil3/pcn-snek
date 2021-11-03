@@ -1,30 +1,18 @@
-import logging
-import re
-import requests
-import aiohttp
-import motor.motor_asyncio as motor
-
-from dis_snek.models import (
-    Scale,
-    Embed,
-    Permission,
-    command,
-    slash_command,
-    slash_option,
-    slash_permission,
-    check
-)
-
 from datetime import datetime
+
+import motor.motor_asyncio as motor
+import requests
+from dis_snek.models import (Embed, Permission, Scale, context_menu,
+                             slash_command, slash_option, slash_permission, MaterialColors)
+from dis_snek.models.context import InteractionContext
+from dis_snek.models.enums import CommandTypes
 from dotenv import load_dotenv
-from os import environ
-
 from extensions import default
-
 
 load_dotenv()
 config = default.config()
-default_player_url = config['urls']['players']
+default_player_url = config['urls']['find_player']
+
 
 guild_id = 689119429375819951
 admin_perm = [Permission(842505724458172467, 1, True)]
@@ -32,6 +20,17 @@ admin_perm = [Permission(842505724458172467, 1, True)]
 #TODO: Add guild ids to a json config file instead of hardcoring them
 
 class PlayerFinder(Scale):
+    def D_Embed(self, title: str) -> Embed:
+        e = Embed(
+            f"PCN Player Lookup: {title}",
+            color=MaterialColors.BLUE_GREY,
+            timestamp=datetime.now()
+        )
+        e.set_footer(
+            "proclubsnation.com",
+            icon_url="https://proclubsnation.com/wp-content/uploads/2020/08/PCN_logo_Best.png",
+        )
+        return e
 
     @slash_command(
         "find",
@@ -41,84 +40,63 @@ class PlayerFinder(Scale):
     )
     @slash_permission(guild_id=guild_id, permissions=admin_perm)
     @slash_option("gamertag", "Enter Gamertag to check", 3, required=True)
-    async def find(self, ctx, gamertag: str):
-        await ctx.defer(ephemeral=True)
-        
-        lookup_gt = gamertag
-        embed = Embed(title="PCN Player Lookup")
-        embed.set_author(
-            name="PCN Player Lookup",
-            url="https://proclubsnation.com",
-            icon_url="https://proclubsnation.com/wp-content/uploads/2020/08/PCN_logo_Best.png",
-        )
-        if bool(re.search(r"\s", gamertag)):
-            lookup_gt = gamertag.replace(' ', '-')
-        else:
-            pass
-        
+    async def find(self, ctx:InteractionContext, gamertag: str):
+        """Finds a player using /find [gamertag]"""
+        await ctx.send(f"Searching for {gamertag}...", ephemeral=True)
+        # try:
+        url = default_player_url.format(gamertag)
         try:
-            url = default_player_url.format(lookup_gt)
-            players_page = requests.get(url) 
-            try:
-               players_page.json()[0]['id'] is None
-            except IndexError:
-                embed.add_field(name="Gamertag", value=f"``{gamertag}``", inline=False)
-                # embed.add_field(name="Discord User", value=..., inline=False)
-                embed.add_field(name="Result", value="Gamertag Not Found.", inline=False)
-                await ctx.send(embeds=[embed])
-            else:
-                page = players_page.json()[0]['link']
-                embed.add_field(name="Gamertag", value=f"``{gamertag}``", inline=False)
-                # embed.add_field(name="Discord User", value=member.mention, inline=True)
-                embed.add_field(name="Result", value="Gamertag found.", inline=False)
-                embed.add_field(name="Profile", value=players_page.json()[0]['link'], inline=False)
-                await ctx.send(embeds=[embed])
-  
-        except Exception as e:
-            print(e)
-
-    # @slash_command(
-    #     "find",
-    #     description="Check player Gamertag is vetted on the site.",
-    #     scope=config['guilds']['TheNine']['id'],
-    # )
-    # @slash_permission(guild_id=config['guilds']['TheNine']['id'], permissions=[Permission(config['guilds']['TheNine']['mod'],2,False)])
-    # @slash_option("gamertag", "Enter Gamertag to check", 3, required=True)
-    # async def findtest(self, ctx, gamertag: str):
-    #     await ctx.defer(ephemeral=True)
-
-    #     lookup_gt = gamertag
-    #     embed = Embed(title="PCN Player Lookup")
-    #     embed.set_author(
-    #         name="PCN Player Lookup",
-    #         url="https://proclubsnation.com",
-    #         icon_url="https://proclubsnation.com/wp-content/uploads/2020/08/PCN_logo_Best.png",
-    #     )
-    #     if bool(re.search(r"\s", gamertag)):
-    #         lookup_gt = gamertag.replace(' ', '-')
-    #     else:
-    #         pass
-        
-    #     try:
-    #         url = default_player_url.format(lookup_gt)
-    #         players_page = requests.get(url) 
-    #         try:
-    #            players_page.json()[0]['id'] is None
-    #         except IndexError:
-    #             embed.add_field(name="Gamertag", value=f"``{gamertag}``", inline=False)
-    #             # embed.add_field(name="Discord User", value=..., inline=False)
-    #             embed.add_field(name="Result", value="Gamertag Not Found.", inline=False)
-    #             await ctx.send(embeds=[embed])
-    #         else:
-    #             page = players_page.json()[0]['link']
-    #             embed.add_field(name="Gamertag", value=f"``{gamertag}``", inline=False)
-    #             # embed.add_field(name="Discord User", value=member.mention, inline=True)
-    #             embed.add_field(name="Result", value="Gamertag found.", inline=False)
-    #             embed.add_field(name="Profile", value=players_page.json()[0]['link'], inline=False)
-    #             await ctx.send(embeds=[embed])
-  
-    #     except Exception as e:
-    #         print(e)
+            r = requests.get(url)
+            if r.status_code == 200:
+                if r.json()[0] is None: raise IndexError
+                else:
+                    player_found = requests.get(config['urls']['find_player'].format(f"{gamertag}&_fields=title,link,date,modified,slug"))
+                    e = self.D_Embed(f"**{player_found.json()[0]['title']['rendered']}**")
+                    e.add_field("Registered", player_found.json()[0]['date'], inline=True)
+                    e.add_field("Last Updated", player_found.json()[0]['modified'], inline=True)
+                    e.add_field("Slug", player_found.json()[0]['slug'])
+                    e.add_field("PCN Profile", player_found.json()[0]['link'])
+                    await ctx.send(embeds=[e])
+            else: 
+                e = self.D_Embed(f"Connection Error")
+                e.description("Failed to connect to API.\n\n{e}\n\nTry again later.")
+                await ctx.send(embeds=[e])
+        except IndexError:
+            e = self.D_Embed(f"Results")
+            e.description = f"**{gamertag}** not found"
+            await ctx.send(embeds=[e])
+            
+    
+    @context_menu(name="Search", context_type=CommandTypes.USER, scopes=[guild_id,])
+    async def search(self, ctx: InteractionContext):
+        """
+        Finds selected player when right clicking>Apps>Lookup
+        """
+        await ctx.defer(ephemeral=True)
+        member = await self.bot.get_member(ctx.target_id, ctx.guild_id)
+        print(str(member))
+        url = default_player_url.format(member.display_name)
+        try:
+            r = requests.get(url)
+            if r.status_code == 200:
+                if r.json()[0] is None: raise IndexError
+                else:
+                    player_found = requests.get(config['urls']['find_player'].format(f"{member.display_name}&_fields=title,link,date,modified,slug"))
+                    e = self.D_Embed(f"**{player_found.json()[0]['title']['rendered']}**")
+                    e.add_field("Discord ID", str(member))
+                    e.add_field("Registered", player_found.json()[0]['date'], inline=True)
+                    e.add_field("Last Updated", player_found.json()[0]['modified'], inline=True)
+                    e.add_field("Slug", player_found.json()[0]['slug'])
+                    e.add_field("PCN Profile", player_found.json()[0]['link'])
+                    await ctx.send(embeds=[e])
+            else: 
+                e = self.D_Embed(f"Connection Error")
+                e.description("Failed to connect to API.\n\n{e}\n\nTry again later.")
+                await ctx.send(embeds=[e])
+        except IndexError:
+            e = self.D_Embed(f"Results")
+            e.description = f"**{member}** not found"
+            await ctx.send(embeds=[e])
 
 
 def setup(bot):

@@ -150,3 +150,10 @@ configs/test_cfg.json
 bot_config.json
 
 bot-env/src/
+Logs/
+
+authorized_keys
+.gitignore
+files.txt
+history.txt
+.vscode/sftp.json

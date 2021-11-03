@@ -8,7 +8,6 @@ from logging.handlers import RotatingFileHandler
 from os import environ, listdir, name
 from sys import platform
 
-import dis_snek.const
 from apscheduler.schedulers.background import BackgroundScheduler
 from dis_snek.client import Snake
 from dis_snek.models import Activity, ActivityType
@@ -18,7 +17,7 @@ from dotenv import load_dotenv
 from pytz import utc
 from pyxtension import Json
 
-from extensions import default, globals, stats
+from extensions import default, globals, uptime
 
 start = time.perf_counter()
 
@@ -54,10 +53,10 @@ class Bot(Snake):
             # os.system("clear")
             print("--Pro Clubs Nation Bot v1.0---")
             print(
-                f"Logged in as {await bot.name} ID:{await bot.id} after {round(time.perf_counter() - start, 2)} seconds"
+                f"Logged in as {bot.user} ID:{bot.user.id} after {round(time.perf_counter() - start, 2)} seconds"
             )
             logging.info(
-                f"Logged in as {await bot.name} ID:{await bot.id} after {round(time.perf_counter() - start, 2)} seconds"
+                f"Logged in as {bot.user} ID:{bot.user.id} after {round(time.perf_counter() - start, 2)} seconds"
             )
         elif platform == "win32":
             os.system('cls')
@@ -69,11 +68,11 @@ class Bot(Snake):
                 f"Logged in as {bot.user} ID: {bot.user.id} after {round(time.perf_counter() - start, 1)} seconds"
             )
         globals.init()
-        globals.lag = bot.latency
+        # globals.lag = bot.latency
 
-        schedule = BackgroundScheduler()
-        schedule.add_job(stats.stats, "interval", seconds=5, id="stats", timezone=utc)
-        schedule.start()
+        # schedule = BackgroundScheduler()
+        # schedule.add_job(uptime.stats, "interval", seconds=5, id="stats", timezone=utc)
+        # schedule.start()
 
 
 

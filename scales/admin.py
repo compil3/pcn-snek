@@ -3,7 +3,6 @@ import pathlib
 from os import listdir
 
 import motor.motor_asyncio as motor
-import psutil
 from dis_snek.errors import ExtensionNotFound, ScaleLoadException
 from dis_snek.models import Embed, Scale
 from dis_snek.models.application_commands import (OptionTypes, Permission,
@@ -86,61 +85,30 @@ class Admin(Scale):
                 selection.add_option(
                     SelectOption(label=file, value=file, default=False)
                 )
-            await ctx.send(f"Testing list", components=selection)
+            await ctx.send(f"Selection", components=selection)
         except Exception as e:
             print(e)
 
     @component_callback("ScalesList")
     async def scalelist_callback(self, ctx: InteractionContext, **kwargs):
-        await ctx.defer(ephemeral=True)
+        await ctx.defer(edit_origin=True)
         selected_scale = ctx.data["data"]["values"][0]
-        embed = Embed(title=f"Attempting to reload {selected_scale}", color=0x808080)
+
+        embed = Embed(title=f"Attempting to reload **{selected_scale}**", color=0x092c69)
+
+        # await ctx.edit_origin(f"Attempting to reload: {selected_scale}")
+
         if selected_scale in Admin.scales_list:
             try:
-                self.bot.regrow_scale(f"scales.{ctx.data['data']['values'][0]}")
+                self.bot.regrow_scale(f"scales.{selected_scale}")
                 embed.add_field(name=f"Reloaded Scale", value=selected_scale, inline=False)
-                await ctx.edit_origin(embeds=[embed])
+                await ctx.edit_origin(embeds=[embed], components=[])
             except ScaleLoadException:
-                self.bot.grow_scale(f"scales.{ctx.data['data']['values'][0]}")
+                self.bot.grow_scale(f"scales.{selected_scale}")
                 embed.add_field(name=f"Reloaded Scale", value=selected_scale, inline=False)
                 await ctx.edit_origin(embeds=[embed])
         else:
                 print("Nothing Worked.")
-
-    # @slash_command("stats", "Check bot statistics", scopes=[guild_id,], default_permission=False)
-    # @slash_permission(guild_id=guild_id, permissions=staff_only)
-    # async def stats(self, ctx):
-    #     await ctx.defer(ephemeral=True)
-    #     seconds = "0"
-    #     minutes = "0"
-    #     hours = "0"
-    #     if globals.time_seconds <= 9:
-    #         seconds = "0" + str(globals.time_seconds)
-    #     elif globals.time_seconds > 9:
-    #         seconds = str(globals.time_seconds)
-    #     if globals.time_minutes <= 9:
-    #         minutes = "0" + str(globals.time_minutes)
-    #     elif globals.time_minutes > 9:
-    #         minutes = str(globals.time_minutes)
-    #     if globals.time_hours <=9:
-    #         hours = "0" + str(globals.time_hours)
-    #     elif globals.time_hours > 9:
-    #         hours = str(globals.time_hours)
-        
-
-    #     uptime = "Days: " + str(globals.time_days) + "\n" + "Time: " + hours + ":" + minutes + ":" + seconds
-    #     embed = Embed(title="Bot Statistics", color=0x808080)
-    #     embed.add_field(name="Uptime:", value=uptime, inline=False)
-    #     embed.add_field(name="Latency", value=f"{round(self.bot.latency*100,3)}ms", inline=False)
-    #     # embed.add_field(name="Hours:", value=str(globals.time_hours), inline=True)
-    #     # embed.add_field(name="Minutes:", value=str(globals.time_minutes), inline=True)
-    #     # embed.add_field(name="Seconds:", value=str(globals.time_seconds), inline=False)
-    #     embed.add_field(name="CPU", value=f"{psutil.cpu_percent()}%", inline=True)
-    #     embed.add_field(name="RAM", value=f"{psutil.virtual_memory()[2]}%", inline=True)
-    #     await ctx.send(embeds=[embed], ephemeral=True)
-
-
-
 
 
 def setup(bot):

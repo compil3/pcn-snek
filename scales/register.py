@@ -72,7 +72,7 @@ class Register(Scale):
             registered_Tag = exists["registered_gamer_tag"]
             date_registered = exists["date_registered"]
         else:
-            current_time = datetime.now()
+            current_time = datetime.now().strftime()
             reg_date = current_time.strftime(format)
             post = {
                 "_id": ctx.author.id,
