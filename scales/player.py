@@ -52,7 +52,7 @@ class PlayerStats(Scale):
             except Exception as e:
                 logging.ERROR(e)
 
-    
+    #TODO Complete the player stats context menu
     @context_menu("Stats", context_type=CommandTypes.USER, scopes=[guildid], default_permission=False, permissions=user_perm)
     async def stats_context(self, ctx: InteractionContext):
         """
@@ -72,4 +72,6 @@ class PlayerStats(Scale):
                 return
         except Exception as e:
             logging.ERROR(e)
+    
+    #TODO create a function to get the player stats
     
