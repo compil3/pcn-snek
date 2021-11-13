@@ -68,7 +68,6 @@ class Admin(Scale):
     async def load_error(self, e: ExtensionNotFound, *args, **kwargs):
         logging.error(f"load.error caught failure: {e}\n{args=}\n{kwargs=}")
 
-    # TODO: add a reload single scale command
 
     @slash_command("scales", description="Staff Only", scopes=[guild_id,], default_permission=False)
     @slash_permission(guild_id=guild_id, permissions=staff_only)
