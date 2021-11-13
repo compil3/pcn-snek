@@ -38,7 +38,7 @@ class PlayerStats(Scale):
         #     activity="with the stars 🌠",
         # ) this is mine
         #  I honestly have no idea.  Switch to test.py
-        
+
 
         "Look up PCN Stats for yourself or someone else.", 
         scopes=[689119429375819951],
@@ -85,14 +85,9 @@ class PlayerStats(Scale):
             except Exception as e:
                 logging.ERROR(e)
 
-<<<<<<< HEAD
     # TODO Complete the player stats context menu
     @context_menu("Stats", context_type=CommandTypes.USER, scopes=[guildid], default_permission=False,
                   permissions=user_perm)
-=======
-    #TODO Complete the player stats context menu
-    @context_menu("Stats", context_type=CommandTypes.USER, scopes=[guildid], default_permission=False, permissions=user_perm)
->>>>>>> 41106b72d990aed875826e68ed5df4b5b926e78d
     async def stats_context(self, ctx: InteractionContext):
         """
         Look up PCN Stats for selected user
@@ -114,7 +109,6 @@ class PlayerStats(Scale):
                 return
         except Exception as e:
             logging.ERROR(e)
-<<<<<<< HEAD
             
     # TODO create a function to get the player stats
     async def builder(self, gamertag, param):
@@ -298,8 +292,3 @@ def setup(bot):
 
 
 
-=======
-    
-    #TODO create a function to get the player stats
-    
->>>>>>> 41106b72d990aed875826e68ed5df4b5b926e78d
