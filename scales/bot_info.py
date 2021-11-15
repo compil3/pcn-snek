@@ -12,15 +12,16 @@ import psutil
 from dis_snek.const import __py_version__, __version__
 from dis_snek.errors import CommandCheckFailure
 from dis_snek.models import Embed, MaterialColors, Scale, Timestamp, check
-from dis_snek.models.application_commands import (Permission, slash_command,
+from dis_snek.models.application_commands import (Permission, PermissionTypes, slash_command,
                                                   slash_permission)
 from dis_snek.models.command import message_command
 from dis_snek.models.context import InteractionContext, MessageContext
 from dis_snek.models.enums import Intents
 from dis_snek.utils.cache import TTLCache
-from extensions import default, globals
 
-config = default.config()
+from extensions import default
+
+config = default.get_config()
 
 guild_id =689119429375819951
 staff_only =Permission(842505724458172467, 1, True),
@@ -78,8 +79,16 @@ class BotInfo (Scale):
         async with httpx.AsyncClient(timeout=None) as client:
             return await client.get(url)
 
-    @slash_command("info", description="Check bot latency", scopes=[guild_id, ], default_permission=False)
-    @slash_permission(guild_id=guild_id, permissions=staff_only)
+    @slash_command(
+        "info", 
+        "Check bot latency", 
+        scopes=[689119429375819951, ],
+        default_permission=False,
+        permissions=[
+            Permission(842505724458172467,689119429375819951, PermissionTypes.ROLE, True),
+        ],
+    )
+    # @slash_permission(guild_id=guild_id, permissions=staff_only)
     async def info(self, ctx):
         await ctx.defer(ephemeral=True)
         urls = []

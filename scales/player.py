@@ -13,7 +13,7 @@ from snek_paginator import Paginator
 
 from extensions import default
 
-config = default.config()
+config = default.get_config()
 
 default_player_url = config['urls']['find_player']
 
@@ -22,41 +22,20 @@ role_id = 843899510483976233
 
 user_perm = [Permission(842505724458172467,PermissionTypes.ROLE, True)]
 
+
 class PlayerStats(Scale):
 
     @slash_command(
-        "pcn_test",
-        # pip install --U --force git+https://github.com/Discord-Snake-Pit/Dis-Snek.git  I use poetry just downlaod the git version not pypi wonder if that it
-        #  dis-snek = {git = "https://github.com/Discord-Snake-Pit/Dis-Snek.git"}  is what poetry uses  Wonder if I have to change all the command permissions because of v2
-        #  actually find.py uses the new permissions and it's greyed out.  So i don't know what's going on. discord could just be fkn wack i t  woTrked for me so i have no clue
-        #   I'm going to make a new command and copy pasta your test command  see if it works :|, maybe because i have delete_unused on it's fucking up
-        
-        # bot = Snake(
-        #     sync_interactions=True,
-        #     delete_unused_application_cmds=True,
-        #     default_prefix="⭐",
-        #     activity="with the stars 🌠",
-        # ) this is mine
-        #  I honestly have no idea.  Switch to test.py
-
-
+        "stats",
         "Look up PCN Stats for yourself or someone else.", 
         scopes=[689119429375819951],
         default_permission=False, 
-        # Player Role, Guildid
         permissions=[
-            Permission(843899510483976233, 689119429375819951, PermissionTypes.ROLE, True)
+            Permission(843899510483976233, 689119429375819951, PermissionTypes.ROLE, True),
         ],
     )
-    # @slash_permission(
-    #     guild_id=guildid, 
-    #     permissions=[
-    #         Permission(111252573054312448,PermissionTypes.USER, True),
-    #         Permission(843899510483976233, PermissionTypes.ROLE, True),
-    #     ],
-    # )
     @slash_option("gamertag", "(Optional) Enter a Gamertag", 3, required=False)
-    async def player_stats(self, ctx: InteractionContext, gamertag: str):
+    async def player_stats(self, ctx: InteractionContext, gamertag: str = None):
         """
         Look up PCN Stats for yourself or someone else.
         """
@@ -65,7 +44,7 @@ class PlayerStats(Scale):
         if gamertag is None:
             gamertag = ctx.author.display_name
             try:
-                post = self.builder(gamertag, False)
+                post = self.builder(gamertag)
                 if post is not None:
                     await Paginator(self.bot, ctx, post).run()
                 else:
@@ -86,8 +65,15 @@ class PlayerStats(Scale):
                 logging.ERROR(e)
 
     # TODO Complete the player stats context menu
-    @context_menu("Stats", context_type=CommandTypes.USER, scopes=[guildid], default_permission=False,
-                  permissions=user_perm)
+    @context_menu(
+        "Stats", 
+        CommandTypes.USER, 
+        scopes=[689119429375819951, ], 
+        default_permission=False,
+        permissions=[
+            Permission(843899510483976233, 689119429375819951, PermissionTypes.ROLE, True),
+        ],
+    )
     async def stats_context(self, ctx: InteractionContext):
         """
         Look up PCN Stats for selected user
@@ -111,7 +97,7 @@ class PlayerStats(Scale):
             logging.ERROR(e)
             
     # TODO create a function to get the player stats
-    async def builder(self, gamertag, param):
+    def builder(self, gamertag):
         uuid = ["21", "26", "27"]
         embeds = []
         url = default_player_url.format(gamertag)

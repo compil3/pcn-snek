@@ -3,30 +3,34 @@ import os
 import sys
 import time
 import zoneinfo
-from datetime import timezone
 from logging.handlers import RotatingFileHandler
-from os import environ, listdir, name
+from os import listdir
 from sys import platform
 
-from apscheduler.schedulers.background import BackgroundScheduler
 from dis_snek.client import Snake
+from dis_snek.errors import ScaleLoadException
 from dis_snek.models import Activity, ActivityType
-from dis_snek.models.enums import Intents, Status
+from dis_snek.models.enums import Intents
 from dis_snek.models.listener import listen
 from dotenv import load_dotenv
-from pytz import utc
-from pyxtension import Json
 
-from extensions import default, globals, uptime
+
+from extensions import default
 
 start = time.perf_counter()
 
-config = default.config()
+config = default.get_config()
 time_seconds = 0
 time_minutes = 0
 time_hours = 0
 time_days = 0
 Toronto = zoneinfo.ZoneInfo('America/Toronto')
+
+# logging.basicConfig(filename="logs.log")
+# cls_log = logging.getLogger(dis_snek.const.logger_name)
+# cls_log.setLevel(logging.DEBUG)
+
+
 class Bot(Snake):
     def __init__(self):
         super().__init__(
@@ -44,13 +48,13 @@ class Bot(Snake):
         await self.change_presence(
             activity=Activity(
                 type=ActivityType.PLAYING,
-                name="Powered by sneks.",
+                name="Powered by Sneks.",
             )
         )
         print(f"{self.user} is ready!")
         print("Ready")
-        if platform == "linux" or platform == "linxu2":
-            # os.system("clear")
+        if platform == "linux" or platform == "linux2" or platform == "darwin":
+            os.system("clear")
             print("--Pro Clubs Nation Bot v1.0---")
             print(
                 f"Logged in as {bot.user} ID:{bot.user.id} after {round(time.perf_counter() - start, 2)} seconds"
@@ -67,13 +71,7 @@ class Bot(Snake):
             logging.info(
                 f"Logged in as {bot.user} ID: {bot.user.id} after {round(time.perf_counter() - start, 1)} seconds"
             )
-        globals.init()
-        # globals.lag = bot.latency
-
-        # schedule = BackgroundScheduler()
-        # schedule.add_job(uptime.stats, "interval", seconds=5, id="stats", timezone=utc)
-        # schedule.start()
-
+        # globals.init()
 
 
 bot = Bot()
@@ -92,14 +90,23 @@ logging.basicConfig(
     format="%(asctime)s,%(msecs)d: %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s",
 )
 
-for filename in listdir("./scales"):
-    if filename.endswith(".py") and not filename.startswith("_"):
-        try:
-            bot.grow_scale(f"scales.{filename[:-3]}")
-            print(f"Loaded scales.{filename[:-3]}")
-            logging.info(f"scales.{filename[:-3]} loaded.")
-        except Exception as e:
-            print(f"Failed to load scale {filename[:-3]}.", file=sys.stderr)
+
+scale_dir = listdir("./scales")
+scale_dir = [f.lower() for f in scale_dir]
+for filename in sorted(scale_dir):
+    try:
+
+        match filename.endswith(".py") and not filename.startswith("_"):
+            case True:
+                bot.grow_scale(f"scales.{filename[:-3]}")
+                logging.info(f"Loaded scales.{filename[:-3]}")
+            case False:
+                pass
+
+    except ScaleLoadException as e:
+        logging.ERROR(f"Failed to load scale {filename[:-3]}.", file=sys.stderr)
+        logging.ERROR(e)
+
 
 load_dotenv()       
 bot.start(config['token'])

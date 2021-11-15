@@ -3,6 +3,8 @@ import pathlib
 from os import listdir
 
 import motor.motor_asyncio as motor
+from dis_snek.models.application_commands import PermissionTypes
+
 from dis_snek.errors import ExtensionNotFound, ScaleLoadException
 from dis_snek.models import Embed, Scale
 from dis_snek.models.application_commands import (OptionTypes, Permission,
@@ -11,9 +13,9 @@ from dis_snek.models.application_commands import (OptionTypes, Permission,
                                                   slash_permission)
 from dis_snek.models.context import InteractionContext
 from dis_snek.models.discord_objects.components import Select, SelectOption
-from extensions import default, globals
 
-config = default.config()
+from extensions import default
+config =  default.get_config()
 format = "%b %d %Y %I:%M%p"
 
 # Mongo Stuff
@@ -32,17 +34,24 @@ class Admin(Scale):
     for file in path.glob("scales/*.py"):
         scales_list.append(file.stem)
 
-    @slash_command("reload", "Reload all Scales", scopes=[guild_id,], default_permission=False)
-    @slash_permission(guild_id=guild_id, permissions=staff_only)
+    @slash_command("reload",
+                   "Reload all Scales",
+                   scopes=[689119429375819951],
+                   default_permission=False,
+                   permissions=[
+                       Permission(842505724458172467, 689119429375819951, PermissionTypes.ROLE, True),
+                   ],
+                   )
+    # @slash_permission(guild_id=guild_id, permissions=staff_only)
     @slash_option("scale", description="Scale to reload", opt_type=OptionTypes.STRING, required=False)
     @slash_option("reload_all", description="Reload all Scales", opt_type=OptionTypes.BOOLEAN, required=False)
     async def reload(self, ctx, **kwargs):
         embed = Embed(title="Reloading all Scales!", color=0x808080)
-        
+
         print(kwargs)
         for filename in listdir("./scales"):
-            
-            if kwargs is None:        
+
+            if kwargs is None:
                 if filename.endswith(".py") and not filename.startswith("_"):
                     try:
                         self.bot.regrow_scale(f"scales.{filename[:-3]}")
@@ -51,7 +60,7 @@ class Admin(Scale):
                         embed.add_field(name=f"Reloaded: ``{filename}``", value="\uFEFF", inline=False)
                     except Exception as e:
                         print(f"Failed to load scale {filename[:-3]}: {e}")
-                        embed.add_field(name=f"Failed to load ``{filename}``", value=e, inline=False)
+                        embed.add_field(name=f"Failed to load ``{filename}``", value=str(e), inline=False)
             elif kwargs == filename:
                 if ".py" not in kwargs:
                     module = kwargs + ".py"
@@ -68,9 +77,14 @@ class Admin(Scale):
     async def load_error(self, e: ExtensionNotFound, *args, **kwargs):
         logging.error(f"load.error caught failure: {e}\n{args=}\n{kwargs=}")
 
-
-    @slash_command("scales", description="Staff Only", scopes=[guild_id,], default_permission=False)
-    @slash_permission(guild_id=guild_id, permissions=staff_only)
+    @slash_command(
+        "scales", 
+        "Staff Only", 
+        scopes=[689119429375819951, ], 
+        default_permission=False,
+        permissions=[
+            Permission(842505724458172467, 689119429375819951, PermissionTypes.ROLE, True),
+        ])
     async def scale_builder(self, ctx: InteractionContext, **kwargs):
         await ctx.defer(ephemeral=True)
         try:
@@ -107,7 +121,7 @@ class Admin(Scale):
                 embed.add_field(name=f"Reloaded Scale", value=selected_scale, inline=False)
                 await ctx.edit_origin(embeds=[embed])
         else:
-                print("Nothing Worked.")
+            print("Nothing Worked.")
 
 
 def setup(bot):

@@ -12,7 +12,7 @@ from dis_snek.models.events import MessageCreate, MessageDelete, MessageUpdate, 
 from extensions import default
 from extensions import auto_verify
 
-config = default.config()
+config = default.get_config()
 
 cluster = motor.AsyncIOMotorClient(config["mongo_connect"])
 db = cluster["Nation"]

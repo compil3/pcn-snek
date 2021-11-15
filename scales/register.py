@@ -11,6 +11,7 @@ import motor.motor_asyncio as motor
 from dis_snek.models.scale import Scale
 from dis_snek.models.application_commands import (
     Permission,
+    PermissionTypes,
     slash_command,
     slash_option,
     slash_permission,
@@ -31,7 +32,7 @@ from extensions import default
 load_dotenv(".env")
 
 
-config = default.config()
+config = default.get_config()
 # default_player_url = config['urls']['players']
 
 # Mongo stuff
@@ -53,11 +54,14 @@ class Register(Scale):
 
     @slash_command(
         "register",
-        description="Register Discord to your Gamertag.**HINT** Look at your player profile page url.('-' FOR SPACES)",
-        scopes=[guild_id,],
-        default_permission=False
+        "Register Discord to your Gamertag.**HINT** Look at your player profile page url.('-' FOR SPACES)",
+        scopes=[689119429375819951, ],
+        default_permission=False,
+        permissions=[
+            Permission(843896103686766632, 689119429375819951, PermissionTypes.ROLE, True),
+        ],
     )
-    @slash_permission(guild_id=guild_id, permissions=register)
+    # @slash_permission(guild_id=guild_id, permissions=register)
     @slash_option("gamertag", "Xbox Gamertag", 3, required=True, choices=None)
     async def register(self, ctx, gamertag: str):
         _status = None
