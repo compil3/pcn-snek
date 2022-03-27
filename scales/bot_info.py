@@ -2,22 +2,18 @@ import asyncio
 import datetime
 import io
 import platform
-import textwrap
-import traceback
-from contextlib import redirect_stdout
+
 from typing import Counter
 
 import httpx
 import psutil
-from dis_snek.const import __py_version__, __version__
-from dis_snek.errors import CommandCheckFailure
-from dis_snek.models import Embed, MaterialColors, Scale, Timestamp, check
-from dis_snek.models.application_commands import (Permission, PermissionTypes, slash_command,
-                                                  slash_permission)
-from dis_snek.models.command import message_command
-from dis_snek.models.context import InteractionContext, MessageContext
-from dis_snek.models.enums import Intents
-from dis_snek.utils.cache import TTLCache
+from dis_snek.client.const import __py_version__, __version__
+from dis_snek.models import Embed, MaterialColors, Scale, Timestamp
+from dis_snek.models.snek.application_commands import (Permission, PermissionTypes, slash_command,)                                                  
+from dis_snek.models.snek.context import InteractionContext
+from dis_snek.models.discord.enums import Intents
+from dis_snek.client.utils.cache import TTLCache
+from dis_snek.ext.debug_scale import utils as _d_utils
 
 from extensions import default
 
@@ -80,16 +76,18 @@ class BotInfo (Scale):
             return await client.get(url)
 
     @slash_command(
-        "info", 
-        "Check bot latency", 
-        scopes=[689119429375819951, ],
-        default_permission=False,
+        "bot", 
+        "Basic information regarding the bot.",
+        sub_cmd_name="info",
+        scopes=[689119429375819951, 442081251441115136],
+        default_permission=True,
         permissions=[
             Permission(842505724458172467,689119429375819951, PermissionTypes.ROLE, True),
+            Permission(442081251441115136,608012366197686286, PermissionTypes.ROLE, True),
         ],
     )
     # @slash_permission(guild_id=guild_id, permissions=staff_only)
-    async def info(self, ctx):
+    async def debug_info(self, ctx):
         await ctx.defer(ephemeral=True)
         urls = []
         seconds = "0"
@@ -114,6 +112,8 @@ class BotInfo (Scale):
         except httpx.ConnectError:
             return await ctx.send("Could not connect to the API. Please try again later.")
 
+        startTime = self.bot.start_time
+        print(startTime)
         uptime = datetime.datetime.now() - self.bot.start_time
         e = self.D_Embed("Information")
         e.add_field(name="CPU", value=f"**{psutil.cpu_count(logical=False)} | {psutil.cpu_percent()}%**", inline=True)
@@ -125,7 +125,8 @@ class BotInfo (Scale):
 
         privileged_intents = [ i.name for i in self.bot.intents if i in Intents.PRIVILEGED]
         if privileged_intents: e.add_field("Intents", " | ".join(privileged_intents))
-        e.add_field("Loaded Scales", ",".join(self.bot.scales))       
+        e.add_field("Loaded Scales", ",".join(self.bot.scales))   
+        e.add_field("Guilds", str(len(self.bot.guilds)))    
 
         e.add_field(name="\u200b", value="**API**", inline=False)
         e.add_field(name="Bot", value=f"```{round(self.bot.latency * 100, 2)}s ```", inline=True)
@@ -136,6 +137,19 @@ class BotInfo (Scale):
         e.add_field(name="Teams API", value=f"```{team_delay}```", inline=True)
         await ctx.send(embeds=[e]) 
 
+    @debug_info.subcommand(
+        "cache", 
+        sub_cmd_description="Get information about the cache.",
+    )
+    async def debug_cache(self, ctx: InteractionContext) -> None:
+        await ctx.defer(ephemeral=True)
+
+        e = self.D_Embed("Cache")
+        e.description = f"```prolog\n{_d_utils.get_cache_state(self.bot)}\n```"
+  
+        await ctx.send(embeds=[e])
+
+    
 
 def setup(bot):
     BotInfo(bot)
