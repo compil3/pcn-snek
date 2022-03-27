@@ -103,37 +103,23 @@ class Tables(Scale):
             for standings in tables:
                 league_table.append(await standings.json())
             for index in league_table:
-                leagueTable = []
-                teamPoints = []
-                test_table = dict()
-                data = dict()
-                test_league = []
+                table = dict()
+                league_table = []
+
+
                 leagueName, season = index[0]['title']['rendered'].split("&#8211;")
-                e = Embed(f"**{season}**", color=MaterialColors.GREEN)
+                e = Embed(f"**{leagueName}\n{season}**", color=MaterialColors.RED)
                 for tablePosition in index[0]['data']:
                     if tablePosition != '0':
-                        test_table = {
-                            "rank":  str(index[0]['data'][tablePosition ]['pos']),
-                            "team":  str(index[0]['data'][tablePosition ]['name']),
-                            "points": str(index[0]['data'][tablePosition ]['pts']),
+                        table = {
+                            "rank":  str(index[0]['data'][tablePosition]['pos']),
+                            "team":  str(index[0]['data'][tablePosition]['name']),
+                            "points": str(index[0]['data'][tablePosition]['pts']),
                         }
-                        # ranking = str(index[0]['data'][tablePosition ]['pos'])
-                        # name = str(index[0]['data'][tablePosition]['name'])
-                        # points = str(index[0]['data'][tablePosition]['pts'])
-                        # # data = [dict(zip(ranking, (a,b))) for a,b in zip(name, pts)]
-                        # test_table[ranking] = name, points
-                    test_league.append(test_table)
-                        # leagueTable.append(". " + str(index[0]['data'][tablePosition]['name']) + "        | " + str(index[0]['data'][tablePosition]['pts']) + '\n'
-                        # )
-                        # teamPoints.append(
-                        #     str(index[0]['data'][tablePosition]['pts']) + '\n'
-                        # )
-                
-                # teamRanking = " ".join(teamPosition)
-                # teamPoints = " ".join(teamPoints)
-                e.description= f"```prolog\n{tablemaker.league_tables(test_league)}\n```"
-                # e.set_author(f"{leagueName}", url=index[0]['link'])
-                # e.add_field("Rank - Pts", leagueTable, inline=True)
+                        league_table.append(table)
+                    else:
+                        pass
+                e.description= f"```prolog\n{tablemaker.league_tables(league_table)}\n```"
                 embeds.append(e)
         paginator = Paginator.create_from_embeds(self.bot, *embeds)
         paginator.show_callback_button = False
