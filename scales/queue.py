@@ -6,9 +6,10 @@ from dis_snek.models.snek.application_commands import (
     component_callback
 )
 from dis_snek.models import Scale, Embed
+from dis_snek.models.discord import Guild
 from dis_snek.models.discord.components import Button, ButtonStyles, ActionRow
 from dis_snek.models.discord.enums import ButtonStyles
-from dis_snek.models.snek.context import ComponentContext, InteractionContext, ModalContext
+from dis_snek.models.snek.context import ComponentContext,  ModalContext
 from dis_snek.models.discord.color import MaterialColors
 from dis_snek.ext.paginators import Paginator
 from dis_snek.models.discord.modal import Modal, ShortText, ParagraphText
@@ -16,12 +17,13 @@ import logging
 from typing import TYPE_CHECKING
 
 from beanie import Document
-
+from config import load_settings
 if TYPE_CHECKING:
     from main import Bot
 
 
 format = "%b %d %Y %I:%M%p"
+
 
 class VerificationQueue(Document):
     discord_id: int
@@ -34,9 +36,19 @@ class VerificationQueue(Document):
     class Collection:
         name = "verification_queue"
 
-class Queue(Scale):
-    bot: "Bot"
+#PCN Roles
+# Admin - 552702041395298324
+# Roster Admin - 543563725630865417
+# player admin - 442082962826199041
+# Moderator - 608012366197686286
+# Owner - 442082486022045697
+# Discord Management - 545392640884211712
 
+
+class Queue(Scale):
+    
+    bot: "Bot"
+    
     @slash_command(
         "queue", 
         "Discord Verification Queue", 
@@ -45,9 +57,8 @@ class Queue(Scale):
         ], 
         default_permission=False, 
         permissions=[
-            Permission(
-                842505724458172467, 689119429375819951, PermissionTypes.ROLE, True
-            ),
+            Permission(842505724458172467, 689119429375819951, PermissionTypes.ROLE, True),
+            # Permission(608012366197686286, )
         ],
     )
     async def queue(self, ctx:ComponentContext):
@@ -85,16 +96,19 @@ class Queue(Scale):
             embeds.append(embed)
         paginator = Paginator.create_from_embeds(self.bot, *embeds)
         paginator.callback= self.show_edit
+        paginator.callback_button_emoji="<:memo:956893316820127745>"
         paginator.show_callback_button=True
         
         await paginator.send(ctx)
 
 
     async def show_edit(self, ctx):
-        # await ctx.defer(edit_origin=True)
-        
+        # config = load_settings()
+        # new_role = Bot.config.roles.new
+        #TODO: Add config import for roles instead of hardcoding
+        player_role_id= 843899510483976233
+
         _discord_id = ctx.message.embeds[0].fields[1].value
-        print(type(_discord_id))
         try:
             result = await VerificationQueue.find_one(VerificationQueue.discord_id == int(_discord_id))
         except Exception as e:
@@ -106,7 +120,7 @@ class Queue(Scale):
                 title=f"Edit user {result.discord_name} | {result.gamertag}",
                 components=[
                     ShortText(
-                        label="Queue Status",
+                        label="Queue Status (Enter Approved or Denied Only)",
                         value=f"Current status: {result.status}",
                         custom_id="status"
                     ),
@@ -120,10 +134,24 @@ class Queue(Scale):
             await ctx.send_modal(edit_user)
             _response: ModalContext = await ctx.bot.wait_for_modal(edit_user)
             if _response.responses is not None:
+                guild_member = await Guild.fetch_member(ctx.guild, int(_discord_id))
+                if _response.responses["status"] == "Approved":
+                    try:
+                        await guild_member.add_role(player_role_id)
+                        if 843896103686766632 in guild_member.roles:
+                            await guild_member.remove_role(843896103686766632, "Removed from `New` role")
+                        if player_role_id not in guild_member.roles:
+                            await guild_member.add_role(player_role_id, reason="Added `Player` role by the bot.")
+
+                    except Exception as e:
+                        logging.error(e)
+
+                    
+
                 result.status = _response.responses["status"]
                 result.reason = _response.responses["reason"]
                 time_now = datetime.now().strftime(format)
-                await result.save()
+                # await result.save()
                 embed = Embed("Verification Queue Updated", description=f"Updated for ``{result.discord_name}``")
                 embed.add_field("Gamertag", result.gamertag, inline=False)
                 embed.add_field("User Id", result.discord_id, inline=False)
