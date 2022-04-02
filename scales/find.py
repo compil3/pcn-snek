@@ -2,7 +2,7 @@ from datetime import datetime
 
 import motor.motor_asyncio as motor
 import requests
-from dis_snek.models.application_commands import PermissionTypes
+from dis_snek.models.snek.application_commands import PermissionTypes
 
 from dis_snek.models import (
     Embed,
@@ -15,10 +15,11 @@ from dis_snek.models import (
     MaterialColors,
     Permissions,
 )
-from dis_snek.models.context import InteractionContext
-from dis_snek.models.enums import CommandTypes
+from dis_snek.models.snek.context import InteractionContext
+from dis_snek.models.discord.enums import CommandTypes
 from dotenv import load_dotenv
 from extensions import default
+from config import load_settings
 
 load_dotenv()
 config = default.get_config()
@@ -29,6 +30,7 @@ admin_perm = [Permission(842505724458172467, 1, True)]
 
 
 # TODO: Add guild ids to a json config file instead of hardcoring them
+# TODO: Make the data retrieval async in all user facing commands
 
 
 class PlayerFinder(Scale):
@@ -44,18 +46,16 @@ class PlayerFinder(Scale):
         )
         return e
 
-    @slash_command(
-        "find",
-        "Staff only",
+    @slash_command("find", "Staff only",
         scopes=[
-            689119429375819951,
+            689119429375819951,442081251441115136
         ],
-        default_permission=False,
-        permissions=[
-            Permission(
-                842505724458172467, 689119429375819951, PermissionTypes.ROLE, True
-            )
-        ],
+        default_permission=True,
+    )
+    @slash_permission(
+        # Permission(910676210172977213, 174342051318464512, PermissionTypes.ROLE, True),  # Player, TheNine
+        # Permission(442081251441115136, 449043802829750272,  PermissionTypes.ROLE, True), # Player, PCN Discord
+        Permission(442081251441115136, 608012366197686286, PermissionTypes.ROLE, True), # Moderator, PCN Discord)      
     )
     # @slash_permission(guild_id=guild_id, permissions=admin_perm)
     @slash_option("gamertag", "Enter Gamertag to check", 3, required=True)
@@ -96,25 +96,27 @@ class PlayerFinder(Scale):
             e.description = f"**{gamertag}** not found"
             await ctx.send(embeds=[e])
 
+
+    #TODO Use the register command to add users to database.  Then pull the gamer tag from the database and use it to find the player.
     @context_menu(
         "Search",
         CommandTypes.USER,
         scopes=[
-            689119429375819951,
-        ],
-        permissions=[
-            Permission(
-                842505724458172467, 689119429375819951, PermissionTypes.ROLE, True
-            )
-        ],
+            689119429375819951,442081251441115136
+        ],        
+    )
+    @slash_permission(
+        # Permission(910676210172977213, 174342051318464512, PermissionTypes.ROLE, True),  # Player, TheNine
+        # Permission(442081251441115136, 449043802829750272,  PermissionTypes.ROLE, True), # Player, PCN Discord
+        Permission(442081251441115136, 608012366197686286, PermissionTypes.ROLE, True), # Moderator, PCN Discord)      
     )
     async def search(self, ctx: InteractionContext):
         """
         Finds selected player when right clicking>Apps>Lookup
         """
         await ctx.defer(ephemeral=True)
-        member = await self.bot.get_member(ctx.target_id, ctx.guild_id)
-        print(str(member))
+        member = self.bot.get_member(ctx.target_id, ctx.guild_id)
+        print(str(member.display_name))
         url = default_player_url.format(member.display_name)
         try:
             r = requests.get(url)
