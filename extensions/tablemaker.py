@@ -1,10 +1,5 @@
 from typing import Any, Optional, Union
 
-
-
-# leagueTable.append(". " + str(index[0]['data'][tablePosition]['name']) + "        | " + str(index[0]['data'][tablePosition]['pts']) + '\n'
-# str(index[0]['data'][tablePosition]['pts']) + '\n'
-
 def league_tables(standings):
     table = []
     for team_pos in standings: 
@@ -38,7 +33,7 @@ def make_table(rows: list[list[Any]], labels: Optional[list[Any]] = None, center
     return "\n".join(lines)
 
 
-# TODO: Team name gets cut off here.
+
 def _get_column_widths(columns) -> list[int]:
     return [max(len(str(value)) for value in column) for column in columns]
 
