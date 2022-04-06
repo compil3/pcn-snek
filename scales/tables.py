@@ -33,21 +33,12 @@ class Tables(Scale):
         self.bot = bot
         self.config = load_settings()
         config = self.config
-    # @Task.create(TimeTrigger(minute=1))
-    # async def table_update():
-    #     """
-    #     Outputs the current table automatically based on a set time frame
-    #     """
-    #     pass
+
     @slash_command(
         "table",
         "Display PCN League Tables",
         scopes=[689119429375819951, 442081251441115136],
         default_permission=True,
-        # permissions =[
-        #     # Permission(910676210172977213, 174342051318464512, PermissionTypes.ROLE, True),  # Player, TheNine
-        #     Permission(442081251441115136, 449043802829750272,  PermissionTypes.ROLE, True),
-        #   ]  # Player, PCN Discord
     )
     @slash_permission(
         # Permission(910676210172977213, 174342051318464512, PermissionTypes.ROLE, True),  # Player, TheNine
@@ -80,14 +71,12 @@ class Tables(Scale):
            ]
         except Exception as e:
                 logging.ERROR(e)
-        await ctx.send("PCN Tables", components=components)
+        await ctx.send("PCN Standings", components=components)
 
     def get_leagues(self,session):
         tasks = []
         for league in competitions:
-            uri = self.config.urls.teams + "?slug=" + league
             tasks.append(session.get(self.config.urls.tables + "?slug=" +league, ssl=False))
-            # tasks.append(session.get(configFile['urls']['teams'].format("?slug=" + league), ssl=False))
         return tasks
 
     @component_callback("all_leagues")
@@ -105,7 +94,6 @@ class Tables(Scale):
             for index in league_table:
                 table = dict()
                 league_table = []
-
 
                 leagueName, season = index[0]['title']['rendered'].split("&#8211;")
                 e = Embed(f"**{leagueName}\n{season}**", color=MaterialColors.RED)
@@ -127,59 +115,43 @@ class Tables(Scale):
 
     @component_callback("super_league")
     async def super_league_table(self, ctx: ComponentContext):
-        pass
-
+        await ctx.defer(edit_origin=True)
+        e = await self.get_standings("super-league")
+        await ctx.send(embeds=[e], components=[])
+        
     @component_callback("league_one")
     async def league_one_table(self, ctx: ComponentContext):
-        pass
+        await ctx.defer(edit_origin=True)
+        e = await self.get_standings("league-one")
+        await ctx.send(embeds=[e], components=[])
 
     @component_callback("league_two")
     async def league_two_table(self, ctx: ComponentContext):
-        pass
+        await ctx.defer(edit_origin=True)
+        e = await self.get_standings("league-two")
+        await ctx.send(embeds=[e], components=[])
 
 
-    @component_callback("TablePicker")
-    async def get_tables(self, ctx:InteractionContext):
-        embeds = []
-        league_table= []
+    async def get_standings(self, league: str):
+        league_table = []
+        async with aiohttp.ClientSession() as session:
+            async with session.get(self.config.urls.tables + f"?slug={league}", ssl=False) as resp:
+                standing_data = await resp.json()
+                league_name, season_number = standing_data[0]['title']['rendered'].split("&#8211;")
+                e = Embed(f"**{league_name}\n{season_number}**", color=MaterialColors.RED)
 
-        match ctx.data['data']['values'][0]:
-            case "all":
-                async with aiohttp.ClientSession() as session:
-                    tasks = self.get_leagues(session)
-                    tables = await asyncio.gather(*tasks)
-
-                    for standings in tables:
-                        league_table.append(await standings.json())
-                    for index in league_table:
-                        leagueTable = []
-                        teamPoints = []
-
-                        leagueName, season = index[0]['title']['rendered'].split("&#8211;")
-                        e = Embed(f"**{season}**", color=MaterialColors.GREEN)
-                        for tablePosition in index[0]['data']:
-                            if tablePosition != '0':
-                                leagueTable.append(
-                                    + ". "
-                                    + str(index[0]['data'][tablePosition]['name'])
-                                    + "        | "
-                                    + str(index[0]['data'][tablePosition]['pts'])
-                                    + '\n'
-                                )
-                                teamPoints.append(
-                                    str(index[0]['data'][tablePosition]['pts']) + '\n'
-                                )
-                        # teamRanking = " ".join(teamPosition)
-                        teamPoints = " ".join(teamPoints)
-                        e.set_author(f"{leagueName}", url=index[0]['link'])
-                        e.add_field("Rank - Pts", leagueTable, inline=True)
-                        embeds.append(e)
-                return embeds
-            case "super-league":
-                page =  Paginator(ctx.message.channel, ctx.message.author, "", embeds)
-
-
-
+                for tablePosition in standing_data[0]['data']:
+                    if tablePosition != '0':
+                        table = {
+                            "rank":  str(standing_data[0]['data'][tablePosition]['pos']),
+                            "team":  str(standing_data[0]['data'][tablePosition]['name']),
+                            "points": str(standing_data[0]['data'][tablePosition]['pts']),
+                        }
+                        league_table.append(table)  
+                    else:
+                        pass
+                e.description= f"```prolog\n{tablemaker.league_tables(league_table)}\n```"
+        return e
 
 def setup(bot):
     Tables(bot)
