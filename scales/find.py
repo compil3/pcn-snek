@@ -125,10 +125,11 @@ class PlayerFinder(Scale):
         await ctx.defer(ephemeral=True)
 
         member = self.bot.get_member(ctx.target_id, ctx.guild_id)
-        find_user = await Registered.find_one(Registered.user_id == member.id)
-        
         try:
-            r = requests.get(self.config.urls.find_player.format(f"{member.display_name}&_fields=title,link,date,modified,slug"))
+            find_user = await Registered.find_one(Registered.user_id == member.id)
+            if find_user is None:
+                raise IndexError
+            r = requests.get(self.config.urls.find_player.format(f"{find_user.registered_gamer_tag}&_fields=title,link,date,modified,slug"))
             if r.status_code == 200:
                 if r.json()[0] is None:
                     raise IndexError
@@ -136,10 +137,7 @@ class PlayerFinder(Scale):
                     e = self.D_Embed(
                         f"**{r.json()[0]['title']['rendered']}**"
                     )
-                    if find_user is None:
-                        e.description= f"{member.display_name} has not registered with the PCN Discord Bot."
-                    else:
-                        e.add_field("Registered GT", find_user.registered_gamer_tag, inline=False)
+                    e.add_field("Registered GT", find_user.registered_gamer_tag, inline=False)
                     e.add_field("Discord ID", str(member))
                     e.add_field(
                         "Registation Date", r.json()[0]["date"], inline=False
@@ -156,8 +154,8 @@ class PlayerFinder(Scale):
                 await ctx.send(embeds=[e])
         except IndexError:
             e = self.D_Embed(f"Results")
-            e.description = f"**{member}** not found"
-            e.add_field("Registered GT", "Not Registered with Bot", inline=False)
+            e.description = f"**{member}** is not registered with Bot."
+            # e.add_field("Registered GT", "Not Registered with Bot", inline=False)
             await ctx.send(embeds=[e])
 
 
