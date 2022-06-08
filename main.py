@@ -33,7 +33,7 @@ class Bot(Client):
             sync_interactions=True,
             auto_defer=True,
             asyncio_debug=self.config.debug,
-            delete_unused_application_cmds=False,
+            delete_unused_application_cmds=True,
             activity ="NAFF'd",
         )
 
