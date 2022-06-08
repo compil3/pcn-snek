@@ -4,7 +4,6 @@ import logging
 from beanie import Document
 from naff import (Client, Embed, Extension, Permissions, slash_command,
                   slash_option, listen)
-from naff.api.events import (MemberAdd, MemberUpdate)
 from utils import auto_verify
 
 format = "%b %d %Y %I:%M%p"
@@ -91,7 +90,7 @@ class Verification(Extension):
                         discord_id=ctx.author.id,
                         discord_name=ctx.author.user.display_name + "#" + ctx.author.user.discriminator,
                         gamertag=gamertag,
-                        status="Pending",
+                        status="New",
                         reason="New Applicant",
                         updated=now.strftime(format),
                     )
