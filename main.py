@@ -1,8 +1,6 @@
-# TODO: add team role assignment, check player site for current team and if react-team matchs, add role, if not do nothing, also rate-limit.
 import asyncio
 import os
 import logging
-from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from sys import platform
 from typing import Optional
@@ -11,7 +9,7 @@ from typing import Optional
 from beanie import init_beanie
 from motor import motor_asyncio
 from naff import (AllowedMentions, Client, Intents, InteractionContext, errors,
-                  listen, logger_name)
+                  listen)
 
 from config import ConfigLoader
 
@@ -110,32 +108,6 @@ def main():
 
     logs_dir = current_dir / "logs"
     log_utils.configure_logging(logger, logs_dir, log_level)
-
-    # sentry_sdk.init(config.sentry_token)
-    # division_by_zero = 1 / 0
-
-    # current_dir = Path(__file__).parent
-    # logs_dir = current_dir / "Logs"
-    # if not os.path.exists(logs_dir):
-    #     os.mkdir(logs_dir)
-
-    # handlers = [
-    #     TimedRotatingFileHandler(logs_dir / f"bot.log", when="W0", encoding="utf-8"),
-    #     logging.StreamHandler(),
-    # ]
-
-    # log_level = logging.DEBUG if config.debug else logging.INFO
-    # formatter = logging.Formatter("[%(asctime)s] [%(levelname)-9.9s]-[%(name)-15.15s]: %(message)s")
-    
-    # # logging.setLoggerClass(log_utils.BotLogger)
-    # snek_logger = logging.getLogger(logger_name)
-    # snek_logger.setLevel(log_level)
-    # logger.setLevel(log_level)
-
-    # for handler in handlers:
-    #     handler.setFormatter(formatter)
-    #     snek_logger.addHandler(handler)
-    #     logger.addHandler(handler)
 
     bot = Bot(current_dir, config)
     asyncio.run(bot.startup())
