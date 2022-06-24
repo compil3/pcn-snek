@@ -89,7 +89,7 @@ class Tables(Extension):
                         league_table.append(table)
                     else:
                         pass
-                e.description= f"```prolog\n{tablemaker.league_tables(league_table)}\n```"
+                e.description = f"```prolog\n{tablemaker.league_tables(league_table)}\n```"
                 embeds.append(e)
         paginator = Paginator.create_from_embeds(self.bot, *embeds)
         paginator.show_callback_button = False
