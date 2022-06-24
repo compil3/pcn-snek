@@ -1,0 +1,17 @@
+{
+    "default": {
+        "version": "2.1.0",
+        "debug": false,
+         "bot_url": "https://github.com/compil3/pcn-snek",
+         "ping_on_error": true,
+         
+         "urls": {
+            "find_player": "https://proclubsnation.com/wp-json/sportspress/v2/players?search={}",
+            "players": "https://proclubsnation.com/wp-json/sportspress/v2/players?slug={}",
+            "teams": "https://proclubsnation.com/wp-json/sportspress/v2/teams",
+            "tables": "https://proclubsnation.com/wp-json/sportspress/v2/tables?slug={}",
+            "schedules": "https://proclubsnation.com/wp-json/sportspress/v2/calendars?slug={}"
+          }
+    },
+    "production":{}
+}
