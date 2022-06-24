@@ -1,19 +1,18 @@
 import asyncio
-import os
 import logging
+import os
+from http.client import HTTPException
 from pathlib import Path
 from sys import platform
 from typing import Optional
-
 
 from beanie import init_beanie
 from motor import motor_asyncio
 from naff import (AllowedMentions, Client, Intents, InteractionContext, errors,
                   listen)
 
-from config import ConfigLoader
-
 import utils.log as log_utils
+from config import ConfigLoader
 
 logger: log_utils.BotLogger = logging.getLogger()
 dev = True
@@ -27,7 +26,6 @@ class Bot(Client):
         super().__init__(
             intents=Intents.DEFAULT | Intents.GUILD_MEMBERS,
             sync_interactions=True,
-            auto_defer=True,
             asyncio_debug=self.config.debug,
             delete_unused_application_cmds=True,
             activity="PCN Test Flight",
@@ -47,7 +45,7 @@ class Bot(Client):
                     file = file.removesuffix(".py")
                     path = os.path.join(root, file)
                     python_import_path = path.replace("/", ".").replace("\\", ".")
-
+                    # print(python_import_path)
                     # load the extension
                     self.load_extension(python_import_path)
 
@@ -69,12 +67,14 @@ class Bot(Client):
 
         if platform == "linux" or platform == "linux2" or platform == "darwin":
             # os.system("clear")
-            print("--Pro Clubs Nation Bot v1.0---")
+            print(f"--Pro Clubs Nation Bot {self.config.version}")
+            print("Connected to {} guild(s)".format(len(self.guilds)))
             # print(msg)
             logger.info(msg)
         elif platform == "win32":
             # os.system('cls')
-            print("--Pro Clubs Nation Bot v1.0---")
+            print(f"--Pro Clubs Nation Bot {self.config.version}")
+            print("Connected to {} guild(s)".format(len(self.guilds)))
             # print(msg)
             logger.info(msg)
 
@@ -89,6 +89,15 @@ class Bot(Client):
         if unexpected:
             logger.error(f"Exception during command execution: {repr(error)}", exc_info=error)
 
+    async def on_error(self, source: str, error: Exception, *args, **kwargs) -> None:
+        """Bot on_error override"""
+        if isinstance(error, HTTPException):
+            errors = error.search_for_message(error.errors)
+            out = f"HTTPException: {error.status}|{error.response.reason}: " + "\n".join(errors)
+            logger.error(out, exc_info=error)
+        else:
+            logger.error(f"Ignoring exception in {source}", exc_info=error)
+
     def add_model(self, model):
         self.models.append(model)
 
@@ -102,6 +111,7 @@ async def send_error(ctx, msg):
 
 def main():
     current_dir = Path(__file__).parent
+    print(current_dir)
     config = ConfigLoader.load_settings()
 
     log_level = logging.DEBG if config.debug else logging.INFO
