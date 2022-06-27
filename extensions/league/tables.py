@@ -1,10 +1,11 @@
 import asyncio
 import logging
-from tabnanny import check
+import time
 
-import aiohttp
+
+from aiohttp_client_cache import CachedSession, SQLiteBackend
 from helpers import tablemaker
-from naff import (check)
+
 from naff.ext.paginators import Paginator
 from naff.models import Embed, Extension
 from naff.models.discord.color import MaterialColors
@@ -14,11 +15,21 @@ from naff.models.naff.application_commands import (Permissions,
                                                    slash_command)
 from naff.models.naff.context import ComponentContext
 from utils.permissions import user_has_player_role
-competitions = ["super-league", "league-one", "league-two"]
+
+
+urls_expire_after ={
+    "proclubsnation.com": 300,
+}
+cache = SQLiteBackend (
+    cache_name='cache.db',
+    expires_after=300,
+    urls_expire_after=urls_expire_after,
+    timeout=5
+)
 
 class Tables(Extension):
 
-    @check(user_has_player_role())
+    # @check(user_has_player_role())
     @slash_command(
         "table",
         description="Display PCN League Tables",
@@ -55,8 +66,9 @@ class Tables(Extension):
                 logging.ERROR(e)
         await ctx.send("PCN Standings", components=components)
 
-    def get_leagues(self,session):
+    def get_league_tables(self,session):
         tasks = []
+        competitions = ["super-league", "league-one", "league-two"]
         for league in competitions:
             tasks.append(session.get(self.bot.config.urls.tables.format(league), ssl=False))
         return tasks
@@ -66,11 +78,11 @@ class Tables(Extension):
         await ctx.defer(edit_origin=True)
         embeds = []
         league_table= []
-
-        async with aiohttp.ClientSession() as session:
-            tasks = self.get_leagues(session)
+        start_time = time.time()
+        async with CachedSession(cache=cache) as session:
+            tasks = self.get_league_tables(session)
             tables = await asyncio.gather(*tasks)
-
+            end_time = time.time() - start_time
             for standings in tables:
                 league_table.append(await standings.json())
             for index in league_table:
@@ -90,6 +102,7 @@ class Tables(Extension):
                     else:
                         pass
                 e.description = f"```prolog\n{tablemaker.league_tables(league_table)}\n```"
+                # e.add_field("Time", end_time, inline=False)
                 embeds.append(e)
         paginator = Paginator.create_from_embeds(self.bot, *embeds)
         paginator.show_callback_button = False
@@ -113,10 +126,9 @@ class Tables(Extension):
         e = await self.get_standings("league-two")
         await ctx.send(embeds=[e], components=[])
 
-
     async def get_standings(self, league: str):
         league_table = []
-        async with aiohttp.ClientSession() as session:
+        async with CachedSession(cache=cache) as session:
             async with session.get(self.bot.config.urls.tables.format(league), ssl=False) as resp:
                 standing_data = await resp.json()
                 league_name, season_number = standing_data[0]['title']['rendered'].split("&#8211;")
