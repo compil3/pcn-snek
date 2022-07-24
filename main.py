@@ -13,12 +13,15 @@ from naff import (AllowedMentions, Client, Intents, InteractionContext, errors,
 
 import utils.log as log_utils
 from config import ConfigLoader
+from loguru import logger
 
-logger: log_utils.BotLogger = logging.getLogger()
-dev = True
+# logger: log_utils.BotLogger = logging.getLogger()
+dev = False
 
-
+logger.add("./logs/main.log", format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}", level="INFO", rotation="50 MB", retention="5 days", compression="zip")
 class Bot(Client):
+
+    @logger.catch
     def __init__(self, current_dir, config):
         self.current_dir: Path = current_dir
         self.config = config
@@ -26,7 +29,7 @@ class Bot(Client):
         super().__init__(
             intents=Intents.DEFAULT | Intents.GUILD_MEMBERS,
             sync_interactions=True,
-            asyncio_debug=self.config.debug,
+            asyncio_debug=False,
             delete_unused_application_cmds=True,
             activity="PCN Test Flight",
         )
@@ -34,6 +37,7 @@ class Bot(Client):
         self.db: Optional[motor_asyncio.AsyncIOMotorClient] = None
         self.models = list()
 
+    @logger.catch
     def get_extension(self):
         logger.info("Loading Extensions...")
 
@@ -49,18 +53,19 @@ class Bot(Client):
                     # load the extension
                     self.load_extension(python_import_path)
 
+    @logger.catch
     async def startup(self):
         self.get_extension()
-        if self.config.debug:
+        if dev:
             self.grow_scale("dis_snek.ext.debug_scale")
 
         self.db = motor_asyncio.AsyncIOMotorClient(self.config.database_address)
         await init_beanie(database=self.db.Nation, document_models=self.models)
-        if dev is True:
+        if self.config.debug is True:
             await self.astart(self.config._dev_token)
         else:
             await self.astart(self.config.discord_token)
-
+    
     @listen()
     async def on_ready(self):
         msg = f"Logged in as {self.user}.\nCurrent scales: {', '.join(self.ext)}"
@@ -73,10 +78,11 @@ class Bot(Client):
             logger.info(msg)
         elif platform == "win32":
             # os.system('cls')
-            print(f"--Pro Clubs Nation Bot {self.config.version}")
-            print("Connected to {} guild(s)".format(len(self.guilds)))
+            logger.info(f"--Pro Clubs Nation Bot {self.config.version}")
+            logger.info("Connected to {} guild(s)".format(len(self.guilds)))
             # print(msg)
-            logger.info(msg)
+            logger.info(f"Logged in as {self.user}.")
+            logger.info(f"Extensions: {', '.join(self.ext)}")
 
     async def on_command_error(self, ctx: InteractionContext, error: Exception, *args, **kwargs):
         unexpected = True
@@ -101,7 +107,7 @@ class Bot(Client):
     def add_model(self, model):
         self.models.append(model)
 
-
+@logger.catch
 async def send_error(ctx, msg):
     if ctx is not None:
         await ctx.send(msg, allowed_mentions=AllowedMentions.none(), ephemeral=True)
@@ -109,15 +115,20 @@ async def send_error(ctx, msg):
         logger.warning(f"Already responded to message, error message: {msg}")
 
 
+@logger.catch
 def main():
     current_dir = Path(__file__).parent
     print(current_dir)
     config = ConfigLoader.load_settings()
+    # TODO: Move cache config here to set it once and to be called self.bot.cache_config()
+    # if os.path.exists("cache.db"):
+    #     os.remove("cache.db")
 
-    log_level = logging.DEBG if config.debug else logging.INFO
+    # log_level = logging.DEBUG if dev else logging.INFO
 
-    logs_dir = current_dir / "logs"
-    log_utils.configure_logging(logger, logs_dir, log_level)
+    # logs_dir = current_dir / "logs"
+    # log_utils.configure_logging(logger, logs_dir, log_level)
+
 
     bot = Bot(current_dir, config)
     asyncio.run(bot.startup())
