@@ -10,7 +10,7 @@ from beanie import init_beanie
 from motor import motor_asyncio
 from naff import (AllowedMentions, Client, Intents, InteractionContext, errors,
                   listen)
-
+from naff.models.naff.context import Context
 import utils.log as log_utils
 from config import ConfigLoader
 from loguru import logger
@@ -19,6 +19,8 @@ from loguru import logger
 dev = False
 
 logger.add("./logs/main.log", format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}", level="INFO", rotation="50 MB", retention="5 days", compression="zip")
+
+
 class Bot(Client):
 
     @logger.catch
@@ -94,6 +96,10 @@ class Bot(Client):
 
         if unexpected:
             logger.error(f"Exception during command execution: {repr(error)}", exc_info=error)
+
+    async def on_command(self, ctx: Context):
+        _command_name = ctx.invoke_target
+        logger.info(f"{ctx.author.display_name} used Command: '{ctx.invoke_target} {ctx.args}'")
 
     async def on_error(self, source: str, error: Exception, *args, **kwargs) -> None:
         """Bot on_error override"""
