@@ -1,28 +1,22 @@
+import functools
 import json
 import logging
 import re
 
 from aiohttp_client_cache import CachedSession, SQLiteBackend
-
+import aiohttp
 from naff import Embed
 
 import utils.log as log_utils
+from aiocache import Cache, cached
+from loguru import logger
 
 logger: log_utils.BotLogger = logging.getLogger(__name__)
 
 
 
-urls_expire_after = {
-    "proclubsnation.com": 300,
-}
-cache= SQLiteBackend (
-    cache_name ='cache.db',
-    expires_after=300,
-    urls_expire_after=urls_expire_after,
-    timeout=5
-)
 class PlayerBuilder:
-
+    @cached(ttl=300)
     async def builder(self, gamertag):
         league_ids = ["21", "26", "27"]
         embeds = []
@@ -30,7 +24,8 @@ class PlayerBuilder:
             if " " in gamertag:
                 gamertag = gamertag.replace(" ", "-")
             
-            async with CachedSession(cache=cache) as session:
+            #TODO: move sessions to command and cache builder.
+            async with aiohttp.ClientSession() as session:
                 async with session.get(self.bot.config.urls.players.format(gamertag)) as response:                   
                     if response.status == 200:
                         player_text = await response.text()
@@ -68,9 +63,11 @@ class PlayerBuilder:
                                                 / 100
                                             )
                                         )
+
                                         draw_record = str(int(int(player_record[index][field]['appearances']) * float(player_record[index][field]['drawratio']) / 100))
                                         loss_record = str(int(int(player_record[index][field]['appearances']) * float(player_record[index][field]['lossratio']) / 100))
                                         windrawlost = win_record + "-" + draw_record + "-" + loss_record
+                                        #TODO: change to display win% only
                                         ratio = (
                                             str(player_record[index][field]['winratio']) 
                                             + "% - " + str(player_record[index][field]['drawratio'])
@@ -83,9 +80,12 @@ class PlayerBuilder:
                                             continue
                                         
                                         # goalie stats & calculations
-                                        elif (int(player_record[index][field]['shotsfaced']) > 0 and float(player_record[index][field]['saveperc']) > 0.0):
-                                            saveperc = float(player_record[index][field]['saveperc']) * 100
-                                            ga = float(player_record[index][field]['goalsagainst'])
+                                        #TODO: fix goalie stats
+                                        #TODO: change to check for player_record[index][field]['saves'] or player_record[index][field]['shotsontargetgk']
+                                        elif (int(player_record[index][field]['goalsconceded']) > 0 and float(player_record[index][field]['saves']) > 0.0):
+                                            saveperc = float(int(player_record[index][field]['saves']) / int(player_record[index][field]['shotsontargetgk'])) * 100
+                                            # saveperc = float(player_record[index][field]['saveperc']) * 100
+                                            ga = float(player_record[index][field]['goalsconceded'])
                                             mins = (float(player_record[index][field]['appearances'] * 90))
                                             gaa = float(ga / mins) * 90
 
@@ -128,7 +128,7 @@ class PlayerBuilder:
                                             embed.add_field(name="Save %", value=saveperc, inline=True)
                                             embed.add_field(name="Shots Faced", value=player_record[index][field]['shotsfaced'], inline=True)
                                             embed.add_field(name="Saves", value=player_record[index][field]['saves'], inline=True)
-                                            embed.add_field(name="GA", value=player_record[index][field]['goalsagainst'], inline=True)
+                                            embed.add_field(name="GA", value=player_record[index][field]['goalsconceded'], inline=True)
                                             embed.add_field(name="GAA", value=round(gaa,2), inline=True)
                                             embed.add_field(name="CS", value=player_record[index][field]['cleansheets'], inline=True)
                                             embed.add_field(name="\u200b", value="```Other```", inline=False)
@@ -212,6 +212,6 @@ class PlayerBuilder:
                                             embed.add_field("Red Cards", value=player_record[index][field]['redcards'], inline=True)
                                             embeds.append(embed)                                    
         except Exception as e:
-            logger.important(e)
+            logger.error(e)
         return embeds
 
