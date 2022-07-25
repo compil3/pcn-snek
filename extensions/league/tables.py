@@ -1,11 +1,17 @@
 import asyncio
+import json
 import logging
+import re
 import time
 
-
+import aiohttp
+import httpx
+from aiocache import cached
 from aiohttp_client_cache import CachedSession, SQLiteBackend
 from helpers import tablemaker
-
+from loguru import logger
+from naff import EmbedFooter, listen
+from naff.api.events import Component
 from naff.ext.paginators import Paginator
 from naff.models import Embed, Extension
 from naff.models.discord.color import MaterialColors
@@ -15,18 +21,12 @@ from naff.models.naff.application_commands import (Permissions,
                                                    slash_command)
 from naff.models.naff.context import ComponentContext
 from utils.permissions import user_has_player_role
+from rich.table import Table
+from rich.console import Console
+from rich import box
 
-
-urls_expire_after ={
-    "proclubsnation.com": 300,
-}
-cache = SQLiteBackend (
-    cache_name='cache.db',
-    expires_after=300,
-    urls_expire_after=urls_expire_after,
-    timeout=5
-)
-
+logger.add("./logs/tables.log", format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}", level="INFO", rotation="50 MB", retention="5 days", compression="zip")
+logo = "https://proclubsnation.com/wp-content/uploads/2021/10/PCN_logo_new.png"
 class Tables(Extension):
 
     # @check(user_has_player_role())
@@ -72,47 +72,22 @@ class Tables(Extension):
         for league in competitions:
             tasks.append(session.get(self.bot.config.urls.tables.format(league), ssl=False))
         return tasks
+        
 
     @component_callback("all_leagues")
     async def pcn_table(self, ctx: ComponentContext):
         await ctx.defer(edit_origin=True)
-        embeds = []
-        league_table= []
-        start_time = time.time()
-        async with CachedSession(cache=cache) as session:
-            tasks = self.get_league_tables(session)
-            tables = await asyncio.gather(*tasks)
-            end_time = time.time() - start_time
-            for standings in tables:
-                league_table.append(await standings.json())
-            for index in league_table:
-                table = dict()
-                league_table = []
+        competitions = ["super-league", "league-one", "league-two"]
 
-                leagueName, season = index[0]['title']['rendered'].split("&#8211;")
-                e = Embed(f"**PCN {leagueName}Table**\n{season}", color=MaterialColors.RED)
-                for tablePosition in index[0]['data']:
-                    if tablePosition != '0':
-                        table = {
-                            "rank":  str(index[0]['data'][tablePosition]['pos']),
-                            "team":  str(index[0]['data'][tablePosition]['name']),
-                            "points": str(index[0]['data'][tablePosition]['pts']),
-                        }
-                        league_table.append(table)
-                    else:
-                        pass
-                e.description = f"```prolog\n{tablemaker.league_tables(league_table)}\n```"
-                # e.add_field("Time", end_time, inline=False)
-                embeds.append(e)
-        paginator = Paginator.create_from_embeds(self.bot, *embeds)
-        paginator.show_callback_button = False
+        e = await self.get_all_standings(competitions)
+        paginator = Paginator.create_from_embeds(self.bot, *e)
         await paginator.send(ctx)
 
     @component_callback("super_league")
     async def super_league_table(self, ctx: ComponentContext):
         await ctx.defer(edit_origin=True)
         e = await self.get_standings("super-league")
-        await ctx.send(embeds=[e], components=[])
+        await ctx.edit_origin("",embeds=[e], components=[])
         
     @component_callback("league_one")
     async def league_one_table(self, ctx: ComponentContext):
@@ -126,26 +101,97 @@ class Tables(Extension):
         e = await self.get_standings("league-two")
         await ctx.send(embeds=[e], components=[])
 
-    async def get_standings(self, league: str):
+    @logger.catch
+    @cached(ttl=300)
+    async def get_standings(self, league):
+        competitions = ["super-league", "league-one", "league-two"]
+
         league_table = []
-        async with CachedSession(cache=cache) as session:
+        async with aiohttp.ClientSession() as session:
             async with session.get(self.bot.config.urls.tables.format(league), ssl=False) as resp:
                 standing_data = await resp.json()
                 league_name, season_number = standing_data[0]['title']['rendered'].split("&#8211;")
                 e = Embed(f"**{league_name}\n{season_number}**", color=MaterialColors.RED)
-
+                e.set_author("PCN", url=f"https://proclubsnation.com/table/{league}", icon_url=logo)
+                table = Table(title="", box=box.ROUNDED)
+                table.add_column("Rank", style="cyan", justify="right", no_wrap=True)
+                table.add_column("Team", style="magenta", justify="full", no_wrap=True)
+                table.add_column("Points", style="green", justify="left", no_wrap=True)
                 for tablePosition in standing_data[0]['data']:
                     if tablePosition != '0':
-                        table = {
-                            "rank":  str(standing_data[0]['data'][tablePosition]['pos']),
-                            "team":  str(standing_data[0]['data'][tablePosition]['name']),
-                            "points": str(standing_data[0]['data'][tablePosition]['pts']),
-                        }
-                        league_table.append(table)  
+                        rank = str(standing_data[0]['data'][tablePosition]['pos'])
+                        if " - 🏆" in str(standing_data[0]['data'][tablePosition]['name']):
+                            team = str(standing_data[0]['data'][tablePosition]['name']).replace(" - 🏆", "") 
+                        else:
+                            team = str(standing_data[0]['data'][tablePosition]['name'])
+                        pts = str(standing_data[0]['data'][tablePosition]['pts'])
+                        table.add_row(rank, team, pts)
                     else:
                         pass
-                e.description= f"```prolog\n{tablemaker.league_tables(league_table)}\n```"
-        return e
+                    console = Console()
+                    with console.capture() as cap:
+                        console.print(table)
+                    table_out = cap.get()
+                    e.description = f"```prolog\n{table_out}\n```"
+                    e.set_footer(text=f"proclubsnation.com", icon_url="https://proclubsnation.com/wp-content/uploads/2021/10/PCN_logo_new.png")
+        return e  
+
+    @logger.catch
+    @cached(ttl=300)
+    async def get_all_standings(self, competition: list):
+        start_time = time.time()
+        async with aiohttp.ClientSession() as client:
+            tasks = []
+            embeds = []
+            league_table= []
+            standings = []
+            for league in competition:
+                url = self.bot.config.urls.tables.format(league)
+                tasks.append(asyncio.ensure_future(get_data(client, url)))
+            
+            tables = await asyncio.gather(*tasks)
+            for standings in tables:
+                league_name, season = standings[0]['title']['rendered'].split("&#8211;")
+                e = Embed(f"**{league_name}\n{season}**", color=MaterialColors.RED)
+                e.set_author("PCN", url=f"https://proclubsnation.com/table/{league}", icon_url=logo)
+                table =  Table(title="", box=box.ROUNDED)
+                table.add_column("Rank", justify="right", style="cyan", no_wrap=True)
+                table.add_column("Team", justify="center", style="magenta", no_wrap=True)
+                table.add_column("Points", justify="right", style="green", no_wrap=True)
+                league_table = []
+                for table_position in standings[0]['data']:
+                    if table_position != '0':
+                        rank = str(standings[0]['data'][table_position]['pos'])
+                        if " - 🏆" in str(standings[0]['data'][table_position]['name']):
+                            team = str(standings[0]['data'][table_position]['name']).replace(" - 🏆", "")
+                        else:
+                            team = str(standings[0]['data'][table_position]['name'])
+                        pts = str(standings[0]['data'][table_position]['pts'])
+                        table.add_row(rank, team, pts)
+                        league_table.append(table)
+                    else:
+                        pass
+                console = Console()
+                with console.capture() as cap:
+                    console.print(table)
+                table_out = cap.get()
+                e.description = f"```prolog\n{table_out}\n```"
+                e.set_footer(text=f"proclubsnation.com", icon_url="https://proclubsnation.com/wp-content/uploads/2021/10/PCN_logo_new.png")
+                embeds.append(e)
+                
+        return embeds                
+        
+
+async def get_data(session, url):
+    async with session.get(url, ssl=True) as resp:
+
+        resp = await resp.json()
+        return resp
+    
+    # table_data = json.loads(table_json)
+    # return table_data
+
+
 
 def setup(bot):
     Tables(bot)
