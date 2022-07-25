@@ -111,9 +111,9 @@ class Tables(Extension):
             async with session.get(self.bot.config.urls.tables.format(league), ssl=False) as resp:
                 standing_data = await resp.json()
                 league_name, season_number = standing_data[0]['title']['rendered'].split("&#8211;")
-                e = Embed(f"**{league_name}\n{season_number}**", color=MaterialColors.RED)
-                e.set_author("PCN", url=f"https://proclubsnation.com/table/{league}", icon_url=logo)
-                table = Table(title="", box=box.ROUNDED)
+                e = Embed(f"**{season_number}**", color=MaterialColors.RED)
+                e.set_author("PCN Tables", url=f"https://proclubsnation.com/table/{league}", icon_url=logo)
+                table = Table(title=f"{league_name}", box=box.ROUNDED)
                 table.add_column("Rank", style="cyan", justify="right", no_wrap=True)
                 table.add_column("Team", style="magenta", justify="full", no_wrap=True)
                 table.add_column("Points", style="green", justify="left", no_wrap=True)
@@ -128,12 +128,12 @@ class Tables(Extension):
                         table.add_row(rank, team, pts)
                     else:
                         pass
-                    console = Console()
-                    with console.capture() as cap:
-                        console.print(table)
-                    table_out = cap.get()
-                    e.description = f"```prolog\n{table_out}\n```"
-                    e.set_footer(text=f"proclubsnation.com", icon_url="https://proclubsnation.com/wp-content/uploads/2021/10/PCN_logo_new.png")
+                console = Console()
+                with console.capture() as cap:
+                    console.print(table)
+                # table_out = cap.get()
+                e.description = f"```ansi\n{cap.get()}```"
+                e.set_footer(text=f"proclubsnation.com", icon_url="https://proclubsnation.com/wp-content/uploads/2021/10/PCN_logo_new.png")
         return e  
 
     @logger.catch
@@ -152,9 +152,9 @@ class Tables(Extension):
             tables = await asyncio.gather(*tasks)
             for standings in tables:
                 league_name, season = standings[0]['title']['rendered'].split("&#8211;")
-                e = Embed(f"**{league_name}\n{season}**", color=MaterialColors.RED)
-                e.set_author("PCN", url=f"https://proclubsnation.com/table/{league}", icon_url=logo)
-                table =  Table(title="", box=box.ROUNDED)
+                e = Embed(f"**{season}**", color=MaterialColors.RED)
+                e.set_author("PCN Tables", url=f"https://proclubsnation.com/table/{league}", icon_url=logo)
+                table =  Table(title=f"{league_name}", box=box.ROUNDED)
                 table.add_column("Rank", justify="right", style="cyan", no_wrap=True)
                 table.add_column("Team", justify="center", style="magenta", no_wrap=True)
                 table.add_column("Points", justify="right", style="green", no_wrap=True)
@@ -174,8 +174,7 @@ class Tables(Extension):
                 console = Console()
                 with console.capture() as cap:
                     console.print(table)
-                table_out = cap.get()
-                e.description = f"```prolog\n{table_out}\n```"
+                e.description = f"```ansi\n{cap.get()}\n```"
                 e.set_footer(text=f"proclubsnation.com", icon_url="https://proclubsnation.com/wp-content/uploads/2021/10/PCN_logo_new.png")
                 embeds.append(e)
                 
