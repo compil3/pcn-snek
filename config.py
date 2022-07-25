@@ -17,7 +17,8 @@ class ConfigLoader:
             dotenv_path="configs/.dynaenv",
         )
 
-        settings.validators.register(Validator("DISCORD_TOKEN", "_DEV_TOKEN", "DATABASE_ADDRESS", "OWNER_IDS", must_exist=True))
+        settings.validators.register(Validator("DISCORD_TOKEN", "_DEV_TOKEN", "DATABASE_ADDRESS", must_exist=True))
         settings.validators.validate()
 
         return settings
+    
