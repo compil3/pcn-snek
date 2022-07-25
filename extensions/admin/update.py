@@ -72,20 +72,23 @@ class Update(Extension):
     @listen()
     async def on_component(self, event: Component):
         ctx = event.context
-        await ctx.defer(edit_origin=True)
-        embed = Embed(title="Extension Reloader", color=0x808080)
-        command_list = get_commands()
-        for command in command_list:
-            if command[0] == ctx.custom_id:
-                try:
-                    self.bot.reload_extension(command[1])
-                    embed.add_field("Reloaded Extension", value=f"**{ctx.custom_id}**", inline=False)
-                    await ctx.edit_origin(embeds=[embed], components=[])
-                    return
-                except errors.ExtensionNotFound:
-                    pass
-                except errors.ExtensionLoadException:
-                    await ctx.edit_origin(f"Failed to reload {ctx.custom_id}", components=[])
+        if ctx.message.content == 'Select Extension':
+            await ctx.defer(edit_origin=True)
+            embed = Embed(title="Extension Reloader", color=0x808080)
+            command_list = get_commands()
+            for command in command_list:
+                if command[0] == ctx.custom_id:
+                    try:
+                        self.bot.reload_extension(command[1])
+                        embed.add_field("Reloaded Extension", value=f"**{ctx.custom_id}**", inline=False)
+                        await ctx.edit_origin("",embeds=[embed], components=[])
+                        return
+                    except errors.ExtensionNotFound:
+                        pass
+                    except errors.ExtensionLoadException:
+                        await ctx.edit_origin(f"Failed to reload {ctx.custom_id}", components=[])
+        else:
+            pass
 
 def setup(bot) -> None:
     Update(bot)
