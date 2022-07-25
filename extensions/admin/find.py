@@ -4,6 +4,8 @@ import requests
 from beanie import Document
 from naff import (Extension, Embed, slash_command, slash_option, InteractionContext, context_menu, Permissions, CommandTypes)
 from naff.models.discord.color import MaterialColors
+import aiohttp
+import json
 import utils.log as log_utils
 
 logger: log_utils.BotLogger = logging.getLogger(__name__)
@@ -53,31 +55,33 @@ class PlayerFinder(Extension):
         # await ctx.send(f"Searching for {gamertag}...", ephemeral=True)
         await ctx.defer(ephemeral=True)
         # try:
-        url = self.bot.config.urls.find_player.format(
-            f"{gamertag}&_fields=title,link,date,modified,slug"
-        )
+        # url = self.bot.config.urls.find_player.format(
+        #     f"{gamertag}&_fields=title,link,date,modified,slug"
+        # )
         try:
-            r = requests.get(url)
-            if r.status_code == 200:
-                if r.json()[0] is None:
-                    raise IndexError
-                else:
-                    e = self.D_Embed(f"**{r.json()[0]['title']['rendered']}**")
-                    e.add_field("Registered", r.json()[0]["date"], inline=True)
-                    e.add_field("Last Updated", r.json()[0]["modified"], inline=True)
-                    e.add_field("Slug", r.json()[0]["slug"])
-                    e.add_field("PCN Profile", r.json()[0]["link"])
-                    logger.command(ctx, f"Found {gamertag}")
-                    await ctx.send(embeds=[e])
-            else:
-                e = self.D_Embed("Connection Error")
-                e.description = "Failed to connect to API.\n\n{e}\n\nTry again later."
-                logger.command(ctx, f"Failed to connect to API {r.status_code}")
-                await ctx.send(embeds=[e])
-        except IndexError:
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(self.bot.config.urls.find_player.format(f"{gamertag}&_fields=title,link,date,modified,slug")) as resp:
+                    if resp.status == 200:
+                        lookup = await resp.text()
+                        player_data = json.loads(lookup)
+                        if len(player_data) < 1:
+                            raise ValueError
+                        else:
+                            e = self.D_Embed("Results")
+                            e.description = f"**{player_data[0]['title']['rendered']}** :white_check_mark:"
+                            e.add_field("Registered", player_data[0]['date'], inline=True )
+                            e.add_field("Last Updated", player_data[0]['modified'], inline=True )
+                            e.add_field("Website Slug", player_data[0]['slug'], inline=False )
+                            e.add_field("PCN Profile", player_data[0]['link'], inline=True )
+                            await ctx.send(embeds=[e])
+                    else:
+                        e = self.D_Embed("Connection Error")
+                        e.description = "Failed to connect to API.\n\n{e}\n\nTry again later."
+                        await ctx.send(embeds=[e])
+        except ValueError:
             e = self.D_Embed("Results")
-            e.description = f"**{gamertag}** not found"
-            logger.command(ctx, f"{gamertag} not found")
+            e.description = f":x:\n**{gamertag}** has been not found."
             await ctx.send(embeds=[e])
 
     # TODO Use the register command to add users to database.  Then pull the gamer tag from the database and use it to find the player.
@@ -94,30 +98,34 @@ class PlayerFinder(Extension):
         try:
             find_user = await Registered.find_one(Registered.user_id == member.id)
             if find_user is None:
-                raise IndexError
-            r = requests.get(self.bot.config.urls.find_player.format(f"{find_user.registered_gamer_tag}&_fields=title,link,date,modified,slug"))
-            if r.status_code == 200:
-                if r.json()[0] is None:
-                    raise IndexError
-                else:
-                    e = self.D_Embed(f"**{r.json()[0]['title']['rendered']}**")
-                    e.add_field(
-                        "Registered GT", find_user.registered_gamer_tag, inline=False
-                    )
-                    e.add_field("Discord ID", str(member))
-                    e.add_field("Registation Date", r.json()[0]["date"], inline=False)
-                    e.add_field("Last Updated", r.json()[0]["modified"], inline=False)
-                    e.add_field("API Slug", r.json()[0]["slug"])
-                    e.add_field("PCN Profile", r.json()[0]["link"])
-                    await ctx.send(embeds=[e])
-            else:
-                e = self.D_Embed("Connection Error")
-                e.description = "Failed to connect to API.\n\n{e}\n\nTry again later."
-                await ctx.send(embeds=[e])
-        except IndexError:
+                raise ValueError
+            async with aiohttp.ClientSession() as session:
+                async with session.get(self.bot.config.urls.find_player.format(f"{find_user.registered_gamer_tag}&_fields=title,link,date,modified,slug")) as resp:
+                    if resp.status == 200:
+                        lookup = await resp.text()
+                        player_lookup = json.loads(lookup)
+
+                        if len(player_lookup) < 1:
+                            raise ValueError
+                        else:
+                            e = self.D_Embed("Results")
+                            e.description = f"**{player_lookup[0]['title']['rendered']}** :white_check_mark:"
+                            e.add_field("Registered", player_lookup[0]['date'], inline=True )
+                            e.add_field("Last Updated", player_lookup[0]['modified'], inline=True )
+                            e.add_field(
+                                "Registered GT", find_user.registered_gamer_tag, inline=False
+                            )
+                            e.add_field("Discord ID", str(member))
+                            e.add_field("Website Slug", player_lookup[0]['slug'], inline=False )
+                            e.add_field("PCN Profile", player_lookup[0]['link'], inline=True )
+                            await ctx.send(embeds=[e])
+                    else:
+                        e = self.D_Embed("Connection Error")
+                        e.description = "Failed to connect to API.\n\n{e}\n\nTry again later."
+                        await ctx.send(embeds=[e])
+        except ValueError:
             e = self.D_Embed("Results")
-            e.description = f"**{member}** is not registered with Bot."
-            # e.add_field("Registered GT", "Not Registered with Bot", inline=False)
+            e.description = f"**{member.display_name}** is not registered with Bot."
             await ctx.send(embeds=[e])
 
 
